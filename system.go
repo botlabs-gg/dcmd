@@ -1,0 +1,203 @@
+package dcmd
+
+import (
+	"fmt"
+	"github.com/bwmarrin/discordgo"
+	"github.com/pkg/errors"
+	"log"
+	"reflect"
+	"runtime/debug"
+	"strings"
+)
+
+type System struct {
+	Root   *Container
+	Prefix PrefixProvider
+}
+
+func NewStandardSystem(staticPrefix string) (system *System) {
+	sys := &System{
+		Root: &Container{},
+	}
+	if staticPrefix != "" {
+		sys.Prefix = NewSimplePrefixProvider(staticPrefix)
+	}
+
+	return sys
+}
+
+// You can add this as a handler directly to discordgo, it will recover from any panics that occured in commands
+// and log errors using the standard logger
+func (sys *System) HandleMessageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
+	// Set up handler to recover from panics
+	defer func() {
+		if r := recover(); r != nil {
+			sys.handlePanic(s, r, false)
+		}
+	}()
+
+	err := sys.CheckMessage(s, m)
+	if err != nil {
+		log.Println("[DCMD ERROR]: Failed checking message:", err)
+	}
+}
+
+// CheckMessage checks the message for commands, and triggers any command that the message should trigger
+// you should not add this as an discord handler directly, if you want to do that you should add "system.HandleMessageCreate" instead.
+func (sys *System) CheckMessage(s *discordgo.Session, m *discordgo.MessageCreate) error {
+	data, err := sys.FillData(s, m.Message)
+	if err != nil {
+		return err
+	}
+
+	if !sys.FindPrefix(data) {
+		// No prefix found in the message for a command to be triggered
+		return nil
+	}
+
+	response, err := sys.Root.Run(data)
+	return sys.HandleCommandResponse(data, response, err)
+}
+
+func (sys *System) HandleCommandResponse(data *Data, resp interface{}, err error) error {
+	if err != nil {
+		log.Printf("[DCMD CMDERROR]: Command %q returned an error: %s", CmdName(data.Cmd), err)
+	}
+
+	var err2 error
+	if resp == nil {
+		_, err2 = SendResponseInterface(data, fmt.Sprintf("%q command returned an error: %s", CmdName(data.Cmd), err), true)
+	} else {
+		_, err2 = SendResponseInterface(data, resp, false)
+	}
+
+	return err2
+}
+
+// FindPrefix checks if the message has a proper command prefix (either from the PrefixProvider or a direction mention to the bot)
+// It sets the source field, and MsgStripped in data if found
+func (sys *System) FindPrefix(data *Data) (found bool) {
+	if data.Channel.IsPrivate {
+		data.MsgStrippedPrefix = data.Msg.Content
+		data.Source = DMSource
+		return true
+	}
+
+	if sys.FindMentionPrefix(data) {
+		return true
+	}
+
+	// Check for custom prefix
+	if sys.Prefix == nil {
+		return false
+	}
+
+	prefix := sys.Prefix.Prefix(data)
+	if prefix == "" {
+		return false
+	}
+
+	if strings.HasPrefix(data.Msg.Content, prefix) {
+		data.Source = PrefixSource
+		data.MsgStrippedPrefix = strings.TrimSpace(strings.Replace(data.Msg.Content, prefix, "", 1))
+		found = true
+	}
+
+	return
+}
+
+func (sys *System) FindMentionPrefix(data *Data) (found bool) {
+	if data.Session.State.User == nil {
+		return false
+	}
+
+	ok := false
+	stripped := ""
+
+	// Check for mention
+	id := data.Session.State.User.ID
+	if strings.Index(data.Msg.Content, "<@"+id+">") == 0 { // Normal mention
+		ok = true
+		stripped = strings.Replace(data.Msg.Content, "<@"+id+">", "", 1)
+	} else if strings.Index(data.Msg.Content, "<@!"+id+">") == 0 { // Nickname mention
+		ok = true
+		stripped = strings.Replace(data.Msg.Content, "<@!"+id+">", "", 1)
+	}
+
+	if ok {
+		data.MsgStrippedPrefix = strings.TrimSpace(stripped)
+		data.Source = MentionSource
+		return true
+	}
+
+	return false
+
+}
+
+func (sys *System) FillData(s *discordgo.Session, m *discordgo.Message) (*Data, error) {
+	channel, err := s.State.Channel(m.ChannelID)
+	if err != nil {
+		return nil, errors.Wrap(err, "System.FillData")
+	}
+
+	data := &Data{
+		Msg:     m,
+		Channel: channel,
+		Session: s,
+	}
+
+	if !channel.IsPrivate {
+		g, err := s.State.Guild(channel.GuildID)
+		if err != nil {
+			return nil, errors.Wrap(err, "System.FillData")
+		}
+
+		data.Guild = g
+	} else {
+		data.Source = DMSource
+	}
+
+	return data, nil
+}
+
+func (sys *System) handlePanic(s *discordgo.Session, r interface{}, sendChatNotice bool) {
+	// TODO
+	stack := debug.Stack()
+	log.Printf("[DCMD PANIC] %v\n%S", r, string(stack))
+}
+
+// Retrieves the prefix that might be different on a per server basis
+type PrefixProvider interface {
+	Prefix(data *Data) string
+}
+
+// Simple Prefix provider for global fixed prefixes
+type SimplePrefixProvider struct {
+	prefix string
+}
+
+func NewSimplePrefixProvider(prefix string) PrefixProvider {
+	return &SimplePrefixProvider{prefix: prefix}
+}
+
+func (pp *SimplePrefixProvider) Prefix(d *Data) string {
+	return pp.prefix
+}
+
+func Indent(depth int) string {
+	indent := ""
+	for i := 0; i < depth; i++ {
+		indent += "-"
+	}
+	return indent
+}
+
+// CmdName retusn either the name returned from the Names function
+func CmdName(cmd Cmd) string {
+	if names := cmd.Names(); len(names) > 0 {
+		return names[0]
+	}
+
+	t := reflect.TypeOf(cmd)
+	return t.Name()
+}
