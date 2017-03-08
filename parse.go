@@ -102,7 +102,7 @@ func ParseSwitches(cmd CmdWithSwitches, data *Data, split []*RawArg) ([]*RawArg,
 
 	for i := 0; i < len(split); i++ {
 		raw := split[i]
-		if raw.Seperator != ArgSeperatorSpace {
+		if raw.Container == 0 {
 			newRaws = append(newRaws, raw)
 			continue
 		}
@@ -154,6 +154,129 @@ func ParseSwitches(cmd CmdWithSwitches, data *Data, split []*RawArg) ([]*RawArg,
 	}
 	data.Switches = parsedSwitches
 	return newRaws, nil
+}
+
+var (
+	ArgContainers = []rune{
+		'"',
+		'`',
+	}
+)
+
+type RawArg struct {
+	Str       string
+	Container rune
+}
+
+// SplitArgs splits the string into fields
+func SplitArgs(in string) []*RawArg {
+	rawArgs := make([]*RawArg, 0)
+
+	curBuf := ""
+	escape := false
+	var container rune
+	for _, r := range in {
+		// Apply or remove escape mode
+		if r == '\\' {
+			if escape {
+				escape = false
+				curBuf += "\\"
+			} else {
+				escape = true
+			}
+
+			continue
+		}
+
+		// Check for other special tokens
+		isSpecialToken := false
+		if !escape {
+			isSpecialToken = true
+
+			if r == ' ' {
+				// Maybe seperate by space
+				if curBuf != "" && container == 0 {
+					rawArgs = append(rawArgs, &RawArg{curBuf, 0})
+					curBuf = ""
+				} else if container != 0 { // If it is quoted proceed as it was a normal rune
+					isSpecialToken = false
+				}
+			} else if r == container && container != 0 && !escape {
+				// Split arg here
+				rawArgs = append(rawArgs, &RawArg{curBuf, container})
+				curBuf = ""
+				container = 0
+			} else if container == 0 {
+				// Check if we should start containing a arg
+				for _, v := range ArgContainers {
+					if v == r {
+						container = v
+						break
+					}
+				}
+
+				if container == 0 {
+					isSpecialToken = false
+				}
+			}
+		}
+
+		if !isSpecialToken {
+			curBuf += string(r)
+		}
+
+		// Reset escape mode
+		escape = false
+	}
+
+	// Something was left in the buffer just add it to the end
+	if curBuf != "" {
+		rawArgs = append(rawArgs, &RawArg{curBuf, 0})
+	}
+
+	return rawArgs
+}
+
+// Finds a proper argument combo from the provided args
+func FindCombo(cmd CmdWithArgDefs, args []*RawArg) (combo []int, ok bool) {
+
+	defs, _, combos := cmd.ArgDefs()
+
+	if len(combos) < 1 {
+		out := make([]int, len(defs))
+		for k, _ := range out {
+			out[k] = k
+		}
+		return out, true
+	}
+
+	var selectedCombo []int
+
+	// Find a possible match
+OUTER:
+	for _, combo := range combos {
+		if len(combo) > len(args) {
+			// No match
+			continue
+		}
+
+		// See if this combos arguments matches that of the parsed command
+		for i, comboArg := range combo {
+			def := defs[comboArg]
+
+			if !def.Type.Matches(args[i].Str) {
+				continue OUTER
+			}
+		}
+
+		// We got a match, if this match is stronger than the last one set it as selected
+		if len(combo) > len(selectedCombo) || !ok {
+			selectedCombo = combo
+			ok = true
+		}
+	}
+
+	return selectedCombo, ok
 }
 
 // Parses a command into a ParsedCommand
@@ -335,128 +458,3 @@ func ParseSwitches(cmd CmdWithSwitches, data *Data, split []*RawArg) ([]*RawArg,
 
 // 	return false
 // }
-
-type ArgSeperator int
-
-const (
-	ArgSeperatorSpace ArgSeperator = iota
-	ArgSeperatorQuote
-)
-
-type RawArg struct {
-	Str       string
-	Seperator ArgSeperator
-}
-
-// SplitArgs splits the string into fields
-func SplitArgs(in string) []*RawArg {
-	rawArgs := make([]*RawArg, 0)
-
-	curBuf := ""
-	escape := false
-	quoted := false
-	for _, r := range in {
-		// Apply or remove escape mode
-		if r == '\\' {
-			if escape {
-				escape = false
-				curBuf += "\\"
-			} else {
-				escape = true
-			}
-
-			continue
-		}
-
-		// Check for other special tokens
-		isSpecialToken := false
-		if !escape {
-			isSpecialToken = true
-			switch r {
-			case ' ': // Split the args here if it's not quoted
-				if curBuf != "" && !quoted {
-					rawArgs = append(rawArgs, &RawArg{curBuf, ArgSeperatorSpace})
-					curBuf = ""
-					quoted = false
-				} else if quoted { // If it is quoted proceed as it was a normal rune
-					isSpecialToken = false
-				}
-			case '"':
-				// Set quoted mode if at start of arg, split arg if already in quoted mode
-				// treat quotes in the middle of arg as normal
-				if curBuf == "" && !quoted {
-					quoted = true
-				} else if quoted {
-					rawArgs = append(rawArgs, &RawArg{curBuf, ArgSeperatorQuote})
-					curBuf = ""
-					quoted = false
-				} else {
-					isSpecialToken = false
-				}
-			default:
-				isSpecialToken = false
-			}
-		}
-
-		if !isSpecialToken {
-			curBuf += string(r)
-		}
-
-		// Reset escape mode
-		escape = false
-	}
-
-	// Something was left in the buffer just add it to the end
-	if curBuf != "" {
-		rawArgs = append(rawArgs, &RawArg{curBuf, ArgSeperatorSpace})
-	}
-
-	return rawArgs
-}
-
-type MatchedArg struct {
-	Type ArgType
-	Raw  *RawArg
-}
-
-// Finds a proper argument combo from the provided args
-func FindCombo(cmd CmdWithArgDefs, args []*RawArg) (combo []int, ok bool) {
-
-	defs, _, combos := cmd.ArgDefs()
-
-	if len(combos) < 1 {
-		out := make([]int, len(defs))
-		for k, _ := range out {
-			out[k] = k
-		}
-		return out, true
-	}
-
-	var selectedCombo []int
-
-	// Find a possible match
-OUTER:
-	for _, combo := range combos {
-		if len(combo) > len(args) {
-			// No match
-			continue
-		}
-
-		// See if this combos arguments matches that of the parsed command
-		for i, comboArg := range combo {
-			def := defs[comboArg]
-
-			if !def.Type.Matches(args[i].Str) {
-				continue OUTER
-			}
-		}
-
-		// We got a match, if this match is stronger than the last one set it as selected
-		if len(combo) > len(selectedCombo) || !ok {
-			selectedCombo = combo
-			ok = true
-		}
-	}
-
-	return selectedCombo, ok
-}

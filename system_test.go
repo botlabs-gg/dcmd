@@ -25,8 +25,8 @@ func (e *TestCommand) Run(data *Data) (interface{}, error) {
 }
 
 func SetupTestSystem() {
-	testSystem, _ = NewStandardSystem("!")
-	testSystem.Root.AddCommand(&TestCommand{})
+	testSystem = NewStandardSystem("!")
+	testSystem.Root.AddCommands(&TestCommand{})
 
 	testSession = &discordgo.Session{
 		State: &discordgo.State{
