@@ -2,7 +2,6 @@ package dcmd
 
 import (
 	"github.com/pkg/errors"
-	"log"
 	"strings"
 )
 
@@ -13,7 +12,6 @@ var (
 
 func ArgParserMW(inner RunFunc) RunFunc {
 	return func(data *Data) (interface{}, error) {
-		log.Println("Running argument parser middleware")
 		// Parse Args
 		err := ParseCmdArgs(data)
 		if err != nil {
@@ -74,7 +72,26 @@ func ParseArgDefs(cmd CmdWithArgDefs, data *Data, split []*RawArg) error {
 			return ErrNotEnoughArguments
 		}
 
-		v, err := def.Type.Parse(split[i].Str, data)
+		combined := ""
+		if i == len(combo)-1 && len(split)-1 > i {
+			// Last arg, but still more after, combine and rebuilt them
+			for j := i; j < len(split); j++ {
+				if j != i {
+					combined += " "
+				}
+
+				temp := split[j]
+				if temp.Container != 0 {
+					combined += string(temp.Container) + temp.Str + string(temp.Container)
+				} else {
+					combined += temp.Str
+				}
+			}
+		} else {
+			combined = split[i].Str
+		}
+
+		v, err := def.Type.Parse(combined, data)
 		if err != nil {
 			return err
 		}
@@ -117,7 +134,6 @@ func ParseSwitches(cmd CmdWithSwitches, data *Data, split []*RawArg) ([]*RawArg,
 		for _, v := range switches {
 			if v.Name == rest {
 				matchedArg = v
-				log.Println("Found switch", v.Name)
 				break
 			}
 		}
@@ -218,6 +234,8 @@ func SplitArgs(in string) []*RawArg {
 				if container == 0 {
 					isSpecialToken = false
 				}
+			} else {
+				isSpecialToken = false
 			}
 		}
 
@@ -231,6 +249,9 @@ func SplitArgs(in string) []*RawArg {
 
 	// Something was left in the buffer just add it to the end
 	if curBuf != "" {
+		if container != 0 {
+			curBuf = string(container) + curBuf
+		}
 		rawArgs = append(rawArgs, &RawArg{curBuf, 0})
 	}
 

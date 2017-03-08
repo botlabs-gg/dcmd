@@ -32,8 +32,15 @@ type EchoCmd struct{}
 
 func (e *EchoCmd) Names() []string          { return []string{"echo"} }
 func (e *EchoCmd) ShortDescription() string { return "Echoes back what you said" }
+
+func (e *EchoCmd) ArgDefs() (args []*dcmd.ArgDef, required int, combos [][]int) {
+	return []*dcmd.ArgDef{
+		{Name: "Str", Help: "What to echo back", Type: dcmd.String},
+	}, 1, nil
+}
+
 func (e *EchoCmd) Run(data *dcmd.Data) (interface{}, error) {
-	return "aaaa", nil
+	return data.Args[0].Value, nil
 }
 
 type CleanCmd struct{}
