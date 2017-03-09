@@ -11,13 +11,15 @@ import (
 )
 
 type System struct {
-	Root   *Container
-	Prefix PrefixProvider
+	Root           *Container
+	Prefix         PrefixProvider
+	ResponseSender ResponseSender
 }
 
 func NewStandardSystem(staticPrefix string) (system *System) {
 	sys := &System{
-		Root: &Container{},
+		Root:           &Container{},
+		ResponseSender: StdResponseSender{LogErrors: true},
 	}
 	if staticPrefix != "" {
 		sys.Prefix = NewSimplePrefixProvider(staticPrefix)
@@ -56,22 +58,7 @@ func (sys *System) CheckMessage(s *discordgo.Session, m *discordgo.MessageCreate
 	}
 
 	response, err := sys.Root.Run(data)
-	return sys.HandleCommandResponse(data, response, err)
-}
-
-func (sys *System) HandleCommandResponse(data *Data, resp interface{}, err error) error {
-	if err != nil {
-		log.Printf("[DCMD CMDERROR]: Command %q returned an error: %s", CmdName(data.Cmd), err)
-	}
-
-	var err2 error
-	if resp == nil {
-		_, err2 = SendResponseInterface(data, fmt.Sprintf("%q command returned an error: %s", CmdName(data.Cmd), err), true)
-	} else {
-		_, err2 = SendResponseInterface(data, resp, false)
-	}
-
-	return err2
+	return sys.ResponseSender.SendResponse(data, response, err)
 }
 
 // FindPrefix checks if the message has a proper command prefix (either from the PrefixProvider or a direction mention to the bot)
@@ -144,6 +131,7 @@ func (sys *System) FillData(s *discordgo.Session, m *discordgo.Message) (*Data, 
 		Msg:     m,
 		Channel: channel,
 		Session: s,
+		System:  sys,
 	}
 
 	if !channel.IsPrivate {
@@ -200,4 +188,27 @@ func CmdName(cmd Cmd) string {
 
 	t := reflect.TypeOf(cmd)
 	return t.Name()
+}
+
+type ResponseSender interface {
+	SendResponse(cmdData *Data, resp interface{}, err error) error
+}
+
+type StdResponseSender struct {
+	LogErrors bool
+}
+
+func (s *StdResponseSender) SendResponse(cmdData *Data, resp interface{}, err error) error {
+	if err != nil && s.LogErrors {
+		log.Printf("[DCMD]: Command %q returned an error: %s", CmdName(data.Cmd), err)
+	}
+
+	var errR error
+	if resp == nil {
+		_, errR = SendResponseInterface(cmdData, fmt.Sprintf("%q command returned an error: %s", CmdName(cmdData.Cmd), err), true)
+	} else {
+		_, errR = SendResponseInterface(cmdData, resp, false)
+	}
+
+	return errR
 }

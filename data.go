@@ -22,6 +22,9 @@ type Data struct {
 	// The chain of containers we went through, first element is always root
 	ContainerChain []*Container
 
+	// The system that triggered this command
+	System *System
+
 	context context.Context
 }
 

@@ -2,8 +2,8 @@
 
 dcmd is a extensible discord command system based on interfaces.
 
-It's very much work in progress atm, check out the example folder for examples.
-
+It's very much work in progress atm, check out the example folder for examples
+.
 ## Features:
 
 For now look in the example folder. Still planning things out.
@@ -13,6 +13,7 @@ For now look in the example folder. Still planning things out.
  - [ ] Full test coverage (See below for info on progress)
  - [ ] Only build middleware chains once?
  - [ ] Standard Help generator
+ - [ ] Customizable error handling
 
 ## Test Coverage:
 
