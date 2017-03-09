@@ -39,14 +39,15 @@ func ParseCmdArgs(data *Data) error {
 	var err error
 	if switchesOk {
 		// Parse the switches first
-		split, err = ParseSwitches(switchesCmd, data, split)
+		split, err = ParseSwitches(switchesCmd.Switches(), data, split)
 		if err != nil {
 			return err
 		}
 	}
 
 	if argDefsOk {
-		err = ParseArgDefs(argDefsCommand, data, split)
+		defs, req, combos := argDefsCommand.ArgDefs()
+		err = ParseArgDefs(defs, req, combos, data, split)
 		if err != nil {
 			return err
 		}
@@ -56,14 +57,13 @@ func ParseCmdArgs(data *Data) error {
 }
 
 // ParseArgDefs parses ordered argument definition for a CmdWithArgDefs
-func ParseArgDefs(cmd CmdWithArgDefs, data *Data, split []*RawArg) error {
+func ParseArgDefs(defs []*ArgDef, required int, combos [][]int, data *Data, split []*RawArg) error {
 
-	combo, ok := FindCombo(cmd, split)
+	combo, ok := FindCombo(defs, combos, split)
 	if !ok {
 		return ErrNoComboFound
 	}
 
-	defs, _, _ := cmd.ArgDefs()
 	parsedArgs := NewParsedArgs(defs)
 
 	for i, v := range combo {
@@ -104,8 +104,7 @@ func ParseArgDefs(cmd CmdWithArgDefs, data *Data, split []*RawArg) error {
 }
 
 // ParseSwitches parses all switches for a CmdWithSwitches, and also takes them out of the raw args
-func ParseSwitches(cmd CmdWithSwitches, data *Data, split []*RawArg) ([]*RawArg, error) {
-	switches := cmd.Switches()
+func ParseSwitches(switches []*ArgDef, data *Data, split []*RawArg) ([]*RawArg, error) {
 	newRaws := make([]*RawArg, 0, len(split))
 
 	// Initialise the parsed switches
@@ -259,9 +258,7 @@ func SplitArgs(in string) []*RawArg {
 }
 
 // Finds a proper argument combo from the provided args
-func FindCombo(cmd CmdWithArgDefs, args []*RawArg) (combo []int, ok bool) {
-
-	defs, _, combos := cmd.ArgDefs()
+func FindCombo(defs []*ArgDef, combos [][]int, args []*RawArg) (combo []int, ok bool) {
 
 	if len(combos) < 1 {
 		out := make([]int, len(defs))

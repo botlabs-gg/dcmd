@@ -19,7 +19,7 @@ type System struct {
 func NewStandardSystem(staticPrefix string) (system *System) {
 	sys := &System{
 		Root:           &Container{},
-		ResponseSender: StdResponseSender{LogErrors: true},
+		ResponseSender: &StdResponseSender{LogErrors: true},
 	}
 	if staticPrefix != "" {
 		sys.Prefix = NewSimplePrefixProvider(staticPrefix)
@@ -200,7 +200,7 @@ type StdResponseSender struct {
 
 func (s *StdResponseSender) SendResponse(cmdData *Data, resp interface{}, err error) error {
 	if err != nil && s.LogErrors {
-		log.Printf("[DCMD]: Command %q returned an error: %s", CmdName(data.Cmd), err)
+		log.Printf("[DCMD]: Command %q returned an error: %s", CmdName(cmdData.Cmd), err)
 	}
 
 	var errR error
