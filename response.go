@@ -39,6 +39,16 @@ func SendResponseInterface(data *Data, reply interface{}, escapeEveryoneMention 
 	case *discordgo.MessageEmbed:
 		m, err := data.Session.ChannelMessageSendEmbed(data.Channel.ID, t)
 		return []*discordgo.Message{m}, err
+	case []*discordgo.MessageEmbed:
+		msgs := make([]*discordgo.Message, len(t))
+		for i, embed := range t {
+			m, err := data.Session.ChannelMessageSendEmbed(data.Channel.ID, embed)
+			if err != nil {
+				return msgs, err
+			}
+			msgs[i] = m
+		}
+		return msgs, nil
 	}
 
 	return nil, errors.New("Unknown reply type: " + reflect.TypeOf(reply).String() + " (Does not implement Response)")

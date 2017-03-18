@@ -150,6 +150,8 @@ func (c *Container) Sub(names ...string) *Container {
 	cop.Description = ""
 	cop.LongDescription = ""
 
+	c.AddCommands(cop)
+
 	return cop
 }
 

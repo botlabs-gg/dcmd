@@ -182,6 +182,10 @@ func Indent(depth int) string {
 
 // CmdName retusn either the name returned from the Names function
 func CmdName(cmd Cmd) string {
+	if cmd == nil {
+		return "Unknown"
+	}
+
 	if names := cmd.Names(); len(names) > 0 {
 		return names[0]
 	}
@@ -204,9 +208,9 @@ func (s *StdResponseSender) SendResponse(cmdData *Data, resp interface{}, err er
 	}
 
 	var errR error
-	if resp == nil {
+	if resp == nil && err != nil {
 		_, errR = SendResponseInterface(cmdData, fmt.Sprintf("%q command returned an error: %s", CmdName(cmdData.Cmd), err), true)
-	} else {
+	} else if resp != nil {
 		_, errR = SendResponseInterface(cmdData, resp, false)
 	}
 
