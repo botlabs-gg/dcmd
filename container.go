@@ -42,6 +42,13 @@ type Container struct {
 	// Hooks to be ran before executing the command
 	// if the hook returns false, it will not execute any hooks or the command itself after it
 	middlewares []MiddleWareFunc
+
+	HelpTitleEmoji string
+	HelpColor      int
+	HelpOwnEmbed   bool
+	Category       string
+
+	Parent *Container
 }
 
 var (
@@ -149,6 +156,7 @@ func (c *Container) Sub(names ...string) *Container {
 	cop.names = names
 	cop.Description = ""
 	cop.LongDescription = ""
+	cop.Parent = c
 
 	c.AddCommands(cop)
 
@@ -169,4 +177,32 @@ func (c *Container) buildMiddlewareChain(r RunFunc) RunFunc {
 	}
 
 	return r
+}
+
+func (c *Container) FullName(aliases bool) string {
+	name := ""
+	if c.Parent != nil {
+		name = c.Parent.FullName(aliases)
+	}
+
+	if len(c.names) < 1 {
+		return name
+	}
+
+	if name != "" {
+		name += " "
+	}
+
+	for i, v := range c.names {
+		if i != 0 && !aliases {
+			return name
+		}
+		if i != 0 {
+			name += "/"
+		}
+
+		name += v
+	}
+
+	return name
 }

@@ -16,6 +16,8 @@ type Data struct {
 	Session *discordgo.Session
 	Source  TriggerSource
 
+	PrefixUsed string
+
 	// The message with the prefix removed (either mention or command prefix)
 	MsgStrippedPrefix string
 

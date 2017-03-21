@@ -18,7 +18,7 @@ type System struct {
 
 func NewStandardSystem(staticPrefix string) (system *System) {
 	sys := &System{
-		Root:           &Container{},
+		Root:           &Container{HelpTitleEmoji: "ℹ️", HelpColor: 0xbeff7a},
 		ResponseSender: &StdResponseSender{LogErrors: true},
 	}
 	if staticPrefix != "" {
@@ -84,6 +84,8 @@ func (sys *System) FindPrefix(data *Data) (found bool) {
 		return false
 	}
 
+	data.PrefixUsed = prefix
+
 	if strings.HasPrefix(data.Msg.Content, prefix) {
 		data.Source = PrefixSource
 		data.MsgStrippedPrefix = strings.TrimSpace(strings.Replace(data.Msg.Content, prefix, "", 1))
@@ -106,14 +108,17 @@ func (sys *System) FindMentionPrefix(data *Data) (found bool) {
 	if strings.Index(data.Msg.Content, "<@"+id+">") == 0 { // Normal mention
 		ok = true
 		stripped = strings.Replace(data.Msg.Content, "<@"+id+">", "", 1)
+		data.PrefixUsed = "<@" + id + ">"
 	} else if strings.Index(data.Msg.Content, "<@!"+id+">") == 0 { // Nickname mention
 		ok = true
+		data.PrefixUsed = "<@!" + id + ">"
 		stripped = strings.Replace(data.Msg.Content, "<@!"+id+">", "", 1)
 	}
 
 	if ok {
 		data.MsgStrippedPrefix = strings.TrimSpace(stripped)
 		data.Source = MentionSource
+
 		return true
 	}
 

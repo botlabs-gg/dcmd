@@ -118,6 +118,19 @@ type CmdWithCustomParser interface {
 	Parse(stripped string, data *Data) (*Data, error)
 }
 
+// CmdWithCategory puts the command in a category, mostly used for the help generation
+type CmdWithCategory interface {
+	Category() *Category
+}
+
+// Category represents a command category
+type Category struct {
+	Name        string
+	Description string
+	HelpEmoji   string
+	EmbedColor  int
+}
+
 // CmdLongArgDefs is a helper for easily adding a compile time assertion
 // Example: `var _ CmdLongArgDefs = (YourCommandType)(nil)`
 // will fail to compile if you do not implement this interface correctly
