@@ -64,13 +64,28 @@ func (c *Container) Run(data *Data) (interface{}, error) {
 		return nil, nil
 	}
 
-	matchingCmd, _ := c.findCommand(data)
+	matchingCmd, rest := c.FindCommand(data.MsgStrippedPrefix)
+
+	data.ContainerChain = append(data.ContainerChain, c)
+
 	if matchingCmd == nil {
+		var defaultHandler Cmd
+		if data.MsgStrippedPrefix == "" && data.Source == MentionSource && c.DefaultMention != nil {
+			defaultHandler = c.DefaultMention
+		} else if data.Source == MentionSource || data.Source == PrefixSource {
+			defaultHandler = c.NotFound
+		} else if data.Source == DMSource {
+			defaultHandler = c.DMNotFound
+		}
+		if defaultHandler != nil {
+			return defaultHandler.Run(data)
+		}
+
 		// No handler to run, do nothing...
 		return nil, nil
 	}
 
-	data.ContainerChain = append(data.ContainerChain, c)
+	data.MsgStrippedPrefix = rest
 	data.Cmd = matchingCmd
 
 	if _, ok := matchingCmd.(*Container); ok {
@@ -99,20 +114,8 @@ func (c *Container) shouldIgnore(data *Data) bool {
 	return false
 }
 
-func (c *Container) findCommand(data *Data) (cmd Cmd, newStripped string) {
-	// Get the stripped message
-	stripped := data.MsgStrippedPrefix
-
-	// No command specified
-	if stripped == "" {
-		if data.Source == MentionSource {
-			return c.DefaultMention, ""
-		}
-
-		return
-	}
-
-	split := strings.SplitN(stripped, " ", 2)
+func (c *Container) FindCommand(searchStr string) (cmd Cmd, rest string) {
+	split := strings.SplitN(searchStr, " ", 2)
 	if len(split) < 1 {
 		return
 	}
@@ -127,23 +130,36 @@ func (c *Container) findCommand(data *Data) (cmd Cmd, newStripped string) {
 
 			// found match!
 			cmd = c
-			data.MsgStrippedPrefix = strings.TrimSpace(stripped[len(name):])
+			rest = strings.TrimSpace(searchStr[len(name):])
 
 			return
 		}
 	}
 
-	// If we got here, no command was found, run one of the default handlers instead
-
-	if data.Source == DMSource && c.DMNotFound == nil {
-		return c.DMNotFound, ""
-	}
-
-	return c.NotFound, ""
+	// No command found
+	return nil, searchStr
 }
 
-func (c *Container) Children() []Cmd {
-	return c.Commands
+func (c *Container) AbsFindCommand(searchStr string) (cmd Cmd, container *Container) {
+	container = c
+	if searchStr == "" {
+		return
+	}
+
+	for {
+		cmd, searchStr = c.FindCommand(searchStr)
+		if cmd == nil {
+			return
+		}
+
+		if cast, ok := cmd.(*Container); ok {
+			return cast.AbsFindCommand(searchStr)
+		}
+
+		return
+	}
+
+	return
 }
 
 // Sub returns a copy of the container but with the following attributes overwritten

@@ -5,7 +5,6 @@ import (
 	"github.com/bwmarrin/discordgo"
 	"github.com/pkg/errors"
 	"log"
-	"reflect"
 	"runtime/debug"
 	"strings"
 )
@@ -185,20 +184,6 @@ func Indent(depth int) string {
 	return indent
 }
 
-// CmdName retusn either the name returned from the Names function
-func CmdName(cmd Cmd) string {
-	if cmd == nil {
-		return "Unknown"
-	}
-
-	if names := cmd.Names(); len(names) > 0 {
-		return names[0]
-	}
-
-	t := reflect.TypeOf(cmd)
-	return t.Name()
-}
-
 type ResponseSender interface {
 	SendResponse(cmdData *Data, resp interface{}, err error) error
 }
@@ -209,12 +194,12 @@ type StdResponseSender struct {
 
 func (s *StdResponseSender) SendResponse(cmdData *Data, resp interface{}, err error) error {
 	if err != nil && s.LogErrors {
-		log.Printf("[DCMD]: Command %q returned an error: %s", CmdName(cmdData.Cmd), err)
+		log.Printf("[DCMD]: Command %q returned an error: %s", CmdName(cmdData.Cmd, true), err)
 	}
 
 	var errR error
 	if resp == nil && err != nil {
-		_, errR = SendResponseInterface(cmdData, fmt.Sprintf("%q command returned an error: %s", CmdName(cmdData.Cmd), err), true)
+		_, errR = SendResponseInterface(cmdData, fmt.Sprintf("%q command returned an error: %s", CmdName(cmdData.Cmd, true), err), true)
 	} else if resp != nil {
 		_, errR = SendResponseInterface(cmdData, resp, false)
 	}

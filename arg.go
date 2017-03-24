@@ -9,6 +9,7 @@ import (
 // ArgDef represents a argument definition, either a switch or plain arg
 type ArgDef struct {
 	Name    string
+	Switch  string
 	Type    ArgType
 	Help    string
 	Default interface{}
@@ -18,6 +19,54 @@ type ParsedArg struct {
 	Def   *ArgDef
 	Value interface{}
 	Raw   *RawArg
+}
+
+func (p *ParsedArg) Str() string {
+	switch t := p.Value.(type) {
+	case string:
+		return t
+	default:
+		return ""
+	}
+}
+
+// TODO: GO-Generate the number ones
+func (p *ParsedArg) Int() int {
+	switch t := p.Value.(type) {
+	case int:
+		return t
+	case uint:
+		return int(t)
+	case int32:
+		return int(t)
+	case int64:
+		return int(t)
+	case uint32:
+		return int(t)
+	case uint64:
+		return int(t)
+	default:
+		return 0
+	}
+}
+
+func (p *ParsedArg) Int64() int64 {
+	switch t := p.Value.(type) {
+	case int:
+		return int64(t)
+	case uint:
+		return int64(t)
+	case int32:
+		return int64(t)
+	case int64:
+		return t
+	case uint32:
+		return int64(t)
+	case uint64:
+		return int64(t)
+	default:
+		return 0
+	}
 }
 
 // NewParsedArgs creates a new ParsedArg slice from defs passed, also filling default values
@@ -41,6 +90,9 @@ type ArgType interface {
 
 	// Attempt to parse it, returning any error if one occured.
 	Parse(part string, data *Data) (val interface{}, err error)
+
+	// Name as shown in help
+	HelpName() string
 }
 
 var (
@@ -78,6 +130,10 @@ func (i *IntArg) Parse(part string, data *Data) (interface{}, error) {
 	return v, nil
 }
 
+func (i *IntArg) HelpName() string {
+	return "Whole number"
+}
+
 // FloatArg matches and parses float arguments
 // If min and max are not equal then the value has to be within min and max or else it will fail parsing
 type FloatArg struct {
@@ -104,11 +160,18 @@ func (f *FloatArg) Parse(part string, data *Data) (interface{}, error) {
 	return v, nil
 }
 
+func (f *FloatArg) HelpName() string {
+	return "Decimal number"
+}
+
 // StringArg matches and parses float arguments
 type StringArg struct{}
 
 func (s *StringArg) Matches(part string) bool                           { return true }
 func (s *StringArg) Parse(part string, data *Data) (interface{}, error) { return part, nil }
+func (s *StringArg) HelpName() string {
+	return "Text/String"
+}
 
 // UserArg matches and parses user argument, optionally searching for the member if RequireMention is false
 type UserArg struct {
@@ -145,6 +208,13 @@ func (u *UserArg) Parse(part string, data *Data) (interface{}, error) {
 	}
 
 	return nil, &ImproperMention{part}
+}
+
+func (u *UserArg) HelpName() string {
+	if u.RequireMention {
+		return "User Mention"
+	}
+	return "User"
 }
 
 func FindDiscordUser(str string, guild *discordgo.Guild) (*discordgo.User, error) {

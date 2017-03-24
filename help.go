@@ -13,7 +13,7 @@ type HelpFormatter interface {
 	// Called when help is only generated for 1 command
 	// You are supposed to dump all command detilas such as arguments
 	// the long description if it has one, switches and whatever else you have in mind.
-	FullCmdHelp(cmd Cmd, container *Container) string
+	FullCmdHelp(cmd Cmd, container *Container) *discordgo.MessageEmbed
 }
 
 // SortedCommandEntry represents an entry in the SortdCommandSet
@@ -157,30 +157,65 @@ func GenerateHelp(d *Data, container *Container, formatter HelpFormatter) (embed
 	return
 }
 
+// GenerateSingleHelp generates help for a single command
+func GenerateTargettedHelp(target string, d *Data, container *Container, formatter HelpFormatter) (embeds []*discordgo.MessageEmbed) {
+
+	cmd, cmdContainer := container.AbsFindCommand(target)
+	if cmd == nil {
+		if container != nil {
+			return GenerateHelp(d, cmdContainer, formatter)
+		}
+		return nil
+	}
+
+	embed := formatter.FullCmdHelp(cmd, cmdContainer)
+
+	return []*discordgo.MessageEmbed{embed}
+}
+
 type StdHelpFormatter struct {
 }
 
 var _ HelpFormatter = (*StdHelpFormatter)(nil)
 
-func (s *StdHelpFormatter) FullCmdHelp(cmd Cmd, container *Container) string {
-	return ""
+func (s *StdHelpFormatter) FullCmdHelp(cmd Cmd, container *Container) *discordgo.MessageEmbed {
+
+	// Add the short description, if available
+	desc := ""
+	if cast, ok := cmd.(CmdWithDescriptions); ok {
+		short, long := cast.Descriptions()
+		if long != "" {
+			desc = long
+		} else if short != "" {
+			desc = short
+		} else {
+			desc = "No description for this command"
+		}
+	}
+
+	args := s.ArgDefs(cmd)
+	switches := s.Switches(cmd)
+
+	embed := &discordgo.MessageEmbed{
+		Title: s.CmdNameString(cmd, container, false),
+	}
+
+	if args != "" {
+		embed.Description += "```\n" + args + "\n```"
+	}
+	if switches != "" {
+		embed.Description += "```\n" + switches + "\n```"
+	}
+
+	embed.Description += "\n" + desc
+
+	return embed
 }
 
 func (s *StdHelpFormatter) ShortCmdHelp(cmd Cmd, container *Container) string {
 
 	// Add the current container stack to the name
-	nameStr := container.FullName(true)
-	if nameStr != "" {
-		nameStr += " "
-	}
-
-	// Add the command names
-	for k, name := range cmd.Names() {
-		if k != 0 {
-			nameStr += "/"
-		}
-		nameStr += name
-	}
+	nameStr := s.CmdNameString(cmd, container, false)
 
 	// Add the short description, if available
 	desc := ""
@@ -196,9 +231,80 @@ func (s *StdHelpFormatter) ShortCmdHelp(cmd Cmd, container *Container) string {
 	return fmt.Sprintf("`%s`%s\n", nameStr, desc)
 }
 
-// GenerateSingleHelp generates help for a single command
-func GenerateSingleCmdHelp(containerChain string, cmd Cmd) *discordgo.MessageEmbed {
-	return nil
+func (s *StdHelpFormatter) CmdNameString(cmd Cmd, container *Container, containerAliases bool) string {
+	// Add the current container stack to the name
+	nameStr := container.FullName(containerAliases)
+	if nameStr != "" {
+		nameStr += " "
+	}
+
+	nameStr += CmdName(cmd, true)
+
+	return nameStr
+}
+
+func (s *StdHelpFormatter) Switches(cmd Cmd) (str string) {
+	cast, ok := cmd.(CmdWithSwitches)
+	if !ok {
+		return ""
+	}
+
+	switches := cast.Switches()
+
+	for _, sw := range switches {
+		str += "[-" + sw.Switch + " " + s.ArgDef(sw) + "]\n"
+	}
+
+	return
+}
+
+func (s *StdHelpFormatter) ArgDefs(cmd Cmd) (str string) {
+	cast, ok := cmd.(CmdWithArgDefs)
+	if !ok {
+		return ""
+	}
+
+	defs, req, combos := cast.ArgDefs()
+
+	if len(combos) > 0 {
+		for _, combo := range combos {
+			comboDefs := make([]*ArgDef, len(combo))
+			for i, v := range combo {
+				comboDefs[i] = defs[v]
+			}
+			str += CmdName(cmd, false) + " " + s.ArgDefLine(comboDefs, len(comboDefs)) + "\n"
+		}
+	} else {
+		str = CmdName(cmd, false) + " " + s.ArgDefLine(defs, req)
+	}
+
+	return
+}
+
+func (s *StdHelpFormatter) ArgDefLine(argDefs []*ArgDef, required int) (str string) {
+	for i, arg := range argDefs {
+		if i != 0 {
+			str += " "
+		}
+
+		sepEnd := ">"
+		if i >= required {
+			// Optional
+			sepEnd = "]"
+			str += "["
+		} else {
+			str += "< "
+		}
+
+		str += s.ArgDef(arg)
+		str += sepEnd
+	}
+
+	return
+}
+
+func (s *StdHelpFormatter) ArgDef(arg *ArgDef) (str string) {
+	return fmt.Sprintf("%s:%s - %s", arg.Name, arg.Type.HelpName(), arg.Help)
 }
 
 type StdHelpCommand struct {
@@ -234,8 +340,20 @@ func (h *StdHelpCommand) Descriptions() (string, string) {
 		"\nExamples: \n`help` - Shows a short summary about all commands\n`help info` - Shows a longer help message for info, can contain examples of how to use it.\nYou are currently reading the longer help message about the `help` command"
 }
 
+func (h *StdHelpCommand) ArgDefs() (args []*ArgDef, required int, combos [][]int) {
+	return []*ArgDef{
+		{Name: "Command", Type: String},
+	}, 0, nil
+}
+
 func (h *StdHelpCommand) Run(d *Data) (interface{}, error) {
 	root := d.ContainerChain[0]
+
+	target := d.Args[0].Str()
+	if target != "" {
+
+	}
+
 	help := GenerateHelp(d, root, h.Formatter)
 	return help, nil
 }
