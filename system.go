@@ -24,6 +24,8 @@ func NewStandardSystem(staticPrefix string) (system *System) {
 		sys.Prefix = NewSimplePrefixProvider(staticPrefix)
 	}
 
+	sys.Root.AddMidlewares(ArgParserMW)
+
 	return sys
 }
 

@@ -293,7 +293,7 @@ func (s *StdHelpFormatter) ArgDefLine(argDefs []*ArgDef, required int) (str stri
 			sepEnd = "]"
 			str += "["
 		} else {
-			str += "< "
+			str += "<"
 		}
 
 		str += s.ArgDef(arg)
@@ -304,7 +304,12 @@ func (s *StdHelpFormatter) ArgDefLine(argDefs []*ArgDef, required int) (str stri
 }
 
 func (s *StdHelpFormatter) ArgDef(arg *ArgDef) (str string) {
-	return fmt.Sprintf("%s:%s - %s", arg.Name, arg.Type.HelpName(), arg.Help)
+	str = fmt.Sprintf("%s:%s", arg.Name, arg.Type.HelpName())
+	if arg.Help != "" {
+		str += " - " + arg.Help
+	}
+
+	return
 }
 
 type StdHelpCommand struct {
@@ -337,7 +342,7 @@ func (h *StdHelpCommand) Names() []string {
 
 func (h *StdHelpCommand) Descriptions() (string, string) {
 	return "Shows short help for all commands, or a longer help for a specific command", "Shows help for all or a specific command" +
-		"\nExamples: \n`help` - Shows a short summary about all commands\n`help info` - Shows a longer help message for info, can contain examples of how to use it.\nYou are currently reading the longer help message about the `help` command"
+		"\n\n**Examples:**\n`help` - Shows a short summary about all commands\n`help info` - Shows a longer help message for info, can contain examples of how to use it.\nYou are currently reading the longer help message about the `help` command"
 }
 
 func (h *StdHelpCommand) ArgDefs() (args []*ArgDef, required int, combos [][]int) {
@@ -350,10 +355,13 @@ func (h *StdHelpCommand) Run(d *Data) (interface{}, error) {
 	root := d.ContainerChain[0]
 
 	target := d.Args[0].Str()
-	if target != "" {
 
+	var help []*discordgo.MessageEmbed
+	if target != "" {
+		help = GenerateTargettedHelp(target, d, root, h.Formatter)
+	} else {
+		help = GenerateHelp(d, root, h.Formatter)
 	}
 
-	help := GenerateHelp(d, root, h.Formatter)
 	return help, nil
 }

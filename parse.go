@@ -38,18 +38,23 @@ func ParseCmdArgs(data *Data) error {
 
 	var err error
 	if switchesOk {
-		// Parse the switches first
-		split, err = ParseSwitches(switchesCmd.Switches(), data, split)
-		if err != nil {
-			return err
+		switches := switchesCmd.Switches()
+		if len(switches) > 0 {
+			// Parse the switches first
+			split, err = ParseSwitches(switchesCmd.Switches(), data, split)
+			if err != nil {
+				return err
+			}
 		}
 	}
 
 	if argDefsOk {
 		defs, req, combos := argDefsCommand.ArgDefs()
-		err = ParseArgDefs(defs, req, combos, data, split)
-		if err != nil {
-			return err
+		if len(defs) > 0 {
+			err = ParseArgDefs(defs, req, combos, data, split)
+			if err != nil {
+				return err
+			}
 		}
 	}
 
@@ -69,6 +74,9 @@ func ParseArgDefs(defs []*ArgDef, required int, combos [][]int, data *Data, spli
 	for i, v := range combo {
 		def := defs[v]
 		if i >= len(split) {
+			if len(combos) < 1 && i <= required {
+				break
+			}
 			return ErrNotEnoughArguments
 		}
 
@@ -91,11 +99,11 @@ func ParseArgDefs(defs []*ArgDef, required int, combos [][]int, data *Data, spli
 			combined = split[i].Str
 		}
 
-		v, err := def.Type.Parse(combined, data)
+		val, err := def.Type.Parse(combined, data)
 		if err != nil {
 			return err
 		}
-		parsedArgs[i].Value = v
+		parsedArgs[v].Value = val
 	}
 
 	data.Args = parsedArgs
