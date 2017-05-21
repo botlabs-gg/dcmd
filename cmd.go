@@ -9,9 +9,9 @@ type Flags int64
 
 const (
 	FlagHideFromHelp Flags = 1 << iota
-	RunInDM
-	IgnoreMentions
-	IgnorePrefix
+	FlagRunInDM
+	FlagIgnoreMentions
+	FlagIgnorePrefix
 )
 
 // RegisteredCommand represents a registered command to the system.
@@ -51,7 +51,7 @@ type Cmd interface {
 // CmdWithDescriptions commands will have the descriptions used in the standard help generator
 // short is used for non-targetted help while long is used for targetted help
 type CmdWithDescriptions interface {
-	Descriptions() (short, long string)
+	Descriptions(data *Data) (short, long string)
 }
 
 // CmdWithArgDefs commands will have their arguments parsed  following the argdefs, required and combos rules returned
@@ -106,7 +106,7 @@ type CmdWithArgDefs interface {
 		Note: you can force arguments to become strings by putting them in quotes or code blocks.
 
 	*/
-	ArgDefs() (args []*ArgDef, required int, combos [][]int)
+	ArgDefs(data *Data) (args []*ArgDef, required int, combos [][]int)
 }
 
 /*

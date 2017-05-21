@@ -56,7 +56,7 @@ var (
 	_ CmdWithDescriptions = (*Container)(nil)
 )
 
-func (c *Container) Descriptions() (string, string) { return c.Description, c.LongDescription }
+func (c *Container) Descriptions(data *Data) (string, string) { return c.Description, c.LongDescription }
 
 func (c *Container) Run(data *Data) (interface{}, error) {
 	if c.shouldIgnore(data) {

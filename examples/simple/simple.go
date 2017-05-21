@@ -49,7 +49,7 @@ var _ dcmd.Cmd = (*StaticCmd)(nil)
 var _ dcmd.CmdWithDescriptions = (*StaticCmd)(nil)
 
 // Descriptions should return a short description (used in the overall help overiview) and one long descriptions for targetted help
-func (s *StaticCmd) Descriptions() (string, string) { return s.Description, "" }
+func (s *StaticCmd) Descriptions(d *dcmd.Data) (string, string) { return s.Description, "" }
 
 func (e *StaticCmd) Run(data *dcmd.Data) (interface{}, error) {
 	return e.Response, nil

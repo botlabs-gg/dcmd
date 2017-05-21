@@ -74,8 +74,7 @@ func main() {
 	}, "Skip", "S")
 
 	musicContainer.AddCommand(&StaticCmd{
-		CmdNames: []string{"Volume", "v"},
-		Desc:     "Sets the volume, accepts a number between `1-100`",
+		Desc: "Sets the volume, accepts a number between `1-100`",
 	}, "Volume", "vol", "v")
 
 	session, err := discordgo.New(os.Getenv("DG_TOKEN"))
@@ -97,7 +96,6 @@ func main() {
 
 type StaticCmd struct {
 	Resp           string
-	CmdNames       []string
 	Desc, LongDesc string
 	Cat            *dcmd.Category
 }
@@ -107,10 +105,8 @@ var _ dcmd.Cmd = (*StaticCmd)(nil)
 var _ dcmd.CmdWithDescriptions = (*StaticCmd)(nil)
 var _ dcmd.CmdWithCategory = (*StaticCmd)(nil)
 
-func (s *StaticCmd) Names() []string { return s.CmdNames }
-
 // Descriptions should return a short Desc (used in the overall help overiview) and one long descriptions for targetted help
-func (s *StaticCmd) Descriptions() (string, string) { return s.Desc, "" }
+func (s *StaticCmd) Descriptions(d *dcmd.Data) (string, string) { return s.Desc, "" }
 
 func (e *StaticCmd) Run(data *dcmd.Data) (interface{}, error) {
 	if e.Resp == "" {

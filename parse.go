@@ -49,7 +49,7 @@ func ParseCmdArgs(data *Data) error {
 	}
 
 	if argDefsOk {
-		defs, req, combos := argDefsCommand.ArgDefs()
+		defs, req, combos := argDefsCommand.ArgDefs(data)
 		if len(defs) > 0 {
 			err = ParseArgDefs(defs, req, combos, data, split)
 			if err != nil {

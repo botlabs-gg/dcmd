@@ -8,12 +8,12 @@ import (
 // HelpFormatter is a interface for help formatters, for an example see StdHelpFormatter
 type HelpFormatter interface {
 	// Called when there is help generated for 2 or more commands
-	ShortCmdHelp(cmd *RegisteredCommand, container *Container) string
+	ShortCmdHelp(cmd *RegisteredCommand, container *Container, data *Data) string
 
 	// Called when help is only generated for 1 command
 	// You are supposed to dump all command detilas such as arguments
 	// the long description if it has one, switches and whatever else you have in mind.
-	FullCmdHelp(cmd *RegisteredCommand, container *Container) *discordgo.MessageEmbed
+	FullCmdHelp(cmd *RegisteredCommand, container *Container, data *Data) *discordgo.MessageEmbed
 }
 
 // SortedCommandEntry represents an entry in the SortdCommandSet
@@ -149,7 +149,7 @@ func GenerateHelp(d *Data, container *Container, formatter HelpFormatter) (embed
 		}
 
 		for _, entry := range set.Commands {
-			embed.Description += formatter.ShortCmdHelp(entry.Cmd, entry.Container)
+			embed.Description += formatter.ShortCmdHelp(entry.Cmd, entry.Container, d)
 		}
 
 		embeds = append(embeds, embed)
@@ -169,22 +169,21 @@ func GenerateTargettedHelp(target string, d *Data, container *Container, formatt
 		return nil
 	}
 
-	embed := formatter.FullCmdHelp(cmd, cmdContainer)
+	embed := formatter.FullCmdHelp(cmd, cmdContainer, d)
 
 	return []*discordgo.MessageEmbed{embed}
 }
 
-type StdHelpFormatter struct {
-}
+type StdHelpFormatter struct{}
 
 var _ HelpFormatter = (*StdHelpFormatter)(nil)
 
-func (s *StdHelpFormatter) FullCmdHelp(cmd *RegisteredCommand, container *Container) *discordgo.MessageEmbed {
+func (s *StdHelpFormatter) FullCmdHelp(cmd *RegisteredCommand, container *Container, data *Data) *discordgo.MessageEmbed {
 
 	// Add the short description, if available
 	desc := ""
 	if cast, ok := cmd.Command.(CmdWithDescriptions); ok {
-		short, long := cast.Descriptions()
+		short, long := cast.Descriptions(data)
 		if long != "" {
 			desc = long
 		} else if short != "" {
@@ -194,7 +193,7 @@ func (s *StdHelpFormatter) FullCmdHelp(cmd *RegisteredCommand, container *Contai
 		}
 	}
 
-	args := s.ArgDefs(cmd)
+	args := s.ArgDefs(cmd, data)
 	switches := s.Switches(cmd.Command)
 
 	embed := &discordgo.MessageEmbed{
@@ -213,7 +212,7 @@ func (s *StdHelpFormatter) FullCmdHelp(cmd *RegisteredCommand, container *Contai
 	return embed
 }
 
-func (s *StdHelpFormatter) ShortCmdHelp(cmd *RegisteredCommand, container *Container) string {
+func (s *StdHelpFormatter) ShortCmdHelp(cmd *RegisteredCommand, container *Container, data *Data) string {
 
 	// Add the current container stack to the name
 	nameStr := s.CmdNameString(cmd, container, false)
@@ -221,7 +220,7 @@ func (s *StdHelpFormatter) ShortCmdHelp(cmd *RegisteredCommand, container *Conta
 	// Add the short description, if available
 	desc := ""
 	if cast, ok := cmd.Command.(CmdWithDescriptions); ok {
-		short, long := cast.Descriptions()
+		short, long := cast.Descriptions(data)
 		if short != "" {
 			desc = ": " + short
 		} else if long != "" {
@@ -259,13 +258,13 @@ func (s *StdHelpFormatter) Switches(cmd Cmd) (str string) {
 	return
 }
 
-func (s *StdHelpFormatter) ArgDefs(cmd *RegisteredCommand) (str string) {
+func (s *StdHelpFormatter) ArgDefs(cmd *RegisteredCommand, data *Data) (str string) {
 	cast, ok := cmd.Command.(CmdWithArgDefs)
 	if !ok {
 		return ""
 	}
 
-	defs, req, combos := cast.ArgDefs()
+	defs, req, combos := cast.ArgDefs(data)
 
 	if len(combos) > 0 {
 		for _, combo := range combos {
@@ -331,7 +330,7 @@ func NewStdHelpCommand() *StdHelpCommand {
 	}
 }
 
-func (h *StdHelpCommand) Descriptions() (string, string) {
+func (h *StdHelpCommand) Descriptions(data *Data) (string, string) {
 	return "Shows short help for all commands, or a longer help for a specific command", "Shows help for all or a specific command" +
 		"\n\n**Examples:**\n`help` - Shows a short summary about all commands\n`help info` - Shows a longer help message for info, can contain examples of how to use it.\nYou are currently reading the longer help message about the `help` command"
 }

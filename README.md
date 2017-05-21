@@ -31,6 +31,11 @@ For now look in the example folder. Still planning things out.
       + [ ] Add/Remove middleware
       + [ ] Command searching
       + [ ] 
+ - Flags
+      + [ ] FlagHideFromHelp
+      + [ ] FlagRunInDM
+      + [ ] FlagIgnoreMentions
+      + [ ] FlagIgnorePrefix
  - Other
       + [ ] Help
 
