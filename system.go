@@ -196,12 +196,12 @@ type StdResponseSender struct {
 
 func (s *StdResponseSender) SendResponse(cmdData *Data, resp interface{}, err error) error {
 	if err != nil && s.LogErrors {
-		log.Printf("[DCMD]: Command %q returned an error: %s", CmdName(cmdData.Cmd, true), err)
+		log.Printf("[DCMD]: Command %q returned an error: %s", cmdData.Cmd.FormatNames(false, "/"), err)
 	}
 
 	var errR error
 	if resp == nil && err != nil {
-		_, errR = SendResponseInterface(cmdData, fmt.Sprintf("%q command returned an error: %s", CmdName(cmdData.Cmd, true), err), true)
+		_, errR = SendResponseInterface(cmdData, fmt.Sprintf("%q command returned an error: %s", cmdData.Cmd.FormatNames(false, "/"), err), true)
 	} else if resp != nil {
 		_, errR = SendResponseInterface(cmdData, resp, false)
 	}

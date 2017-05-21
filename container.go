@@ -11,14 +11,14 @@ type RunFunc func(data *Data) (interface{}, error)
 // Containers can be nested by calling Container.Sub(...)
 type Container struct {
 	// Default mention handler, used when the bot is mentioned without any command specified
-	DefaultMention Cmd
+	DefaultMention RunFunc
 
 	// Default not found handler, called when no command is found from input
-	NotFound Cmd
+	NotFound RunFunc
 
 	// Default DM not found handler, same as NotFound but for Direct Messages, if none specified
 	// will use notfound if set.
-	DMNotFound Cmd
+	DMNotFound RunFunc
 
 	// Set to ignore bots
 	IgnoreBots bool
@@ -30,14 +30,14 @@ type Container struct {
 	RunInDM bool
 
 	// The muxer names
-	names []string
+	Names []string
 	// The muxer description
 	Description string
 	// The muxer long description
 	LongDescription string
 
 	// Commands this muxer will check
-	Commands []Cmd
+	Commands []*RegisteredCommand
 
 	// Hooks to be ran before executing the command
 	// if the hook returns false, it will not execute any hooks or the command itself after it
@@ -56,7 +56,6 @@ var (
 	_ CmdWithDescriptions = (*Container)(nil)
 )
 
-func (c *Container) Names() []string                { return c.names }
 func (c *Container) Descriptions() (string, string) { return c.Description, c.LongDescription }
 
 func (c *Container) Run(data *Data) (interface{}, error) {
@@ -69,7 +68,7 @@ func (c *Container) Run(data *Data) (interface{}, error) {
 	data.ContainerChain = append(data.ContainerChain, c)
 
 	if matchingCmd == nil {
-		var defaultHandler Cmd
+		var defaultHandler RunFunc
 		if data.MsgStrippedPrefix == "" && data.Source == MentionSource && c.DefaultMention != nil {
 			defaultHandler = c.DefaultMention
 		} else if data.Source == MentionSource || data.Source == PrefixSource {
@@ -78,7 +77,7 @@ func (c *Container) Run(data *Data) (interface{}, error) {
 			defaultHandler = c.DMNotFound
 		}
 		if defaultHandler != nil {
-			return defaultHandler.Run(data)
+			return defaultHandler(data)
 		}
 
 		// No handler to run, do nothing...
@@ -88,13 +87,13 @@ func (c *Container) Run(data *Data) (interface{}, error) {
 	data.MsgStrippedPrefix = rest
 	data.Cmd = matchingCmd
 
-	if _, ok := matchingCmd.(*Container); ok {
-		return matchingCmd.Run(data)
+	if _, ok := matchingCmd.Command.(*Container); ok {
+		return matchingCmd.Command.Run(data)
 
 	}
 
 	// Build the run chain
-	var last RunFunc = matchingCmd.Run
+	var last RunFunc = matchingCmd.Command.Run
 	for i := range data.ContainerChain {
 		last = data.ContainerChain[len(data.ContainerChain)-1-i].buildMiddlewareChain(last)
 	}
@@ -114,7 +113,7 @@ func (c *Container) shouldIgnore(data *Data) bool {
 	return false
 }
 
-func (c *Container) FindCommand(searchStr string) (cmd Cmd, rest string) {
+func (c *Container) FindCommand(searchStr string) (cmd *RegisteredCommand, rest string) {
 	split := strings.SplitN(searchStr, " ", 2)
 	if len(split) < 1 {
 		return
@@ -122,7 +121,7 @@ func (c *Container) FindCommand(searchStr string) (cmd Cmd, rest string) {
 
 	// Start looking for matches in all subcommands
 	for _, c := range c.Commands {
-		names := c.Names()
+		names := c.Names
 		for _, name := range names {
 			if !strings.EqualFold(name, split[0]) {
 				continue
@@ -140,7 +139,7 @@ func (c *Container) FindCommand(searchStr string) (cmd Cmd, rest string) {
 	return nil, searchStr
 }
 
-func (c *Container) AbsFindCommand(searchStr string) (cmd Cmd, container *Container) {
+func (c *Container) AbsFindCommand(searchStr string) (cmd *RegisteredCommand, container *Container) {
 	container = c
 	if searchStr == "" {
 		return
@@ -152,7 +151,7 @@ func (c *Container) AbsFindCommand(searchStr string) (cmd Cmd, container *Contai
 			return
 		}
 
-		if cast, ok := cmd.(*Container); ok {
+		if cast, ok := cmd.Command.(*Container); ok {
 			return cast.AbsFindCommand(searchStr)
 		}
 
@@ -164,23 +163,39 @@ func (c *Container) AbsFindCommand(searchStr string) (cmd Cmd, container *Contai
 
 // Sub returns a copy of the container but with the following attributes overwritten
 // and no commands registered
-func (c *Container) Sub(names ...string) *Container {
+func (c *Container) Sub(mainName string, aliases ...string) *Container {
 	cop := new(Container)
 	*cop = *c
 
 	cop.Commands = nil
-	cop.names = names
+	cop.Names = append([]string{mainName}, aliases...)
 	cop.Description = ""
 	cop.LongDescription = ""
 	cop.Parent = c
 
-	c.AddCommands(cop)
+	c.AddCommandWithMiddleware(cop, mainName, aliases)
 
 	return cop
 }
 
-func (c *Container) AddCommands(cmds ...Cmd) {
-	c.Commands = append(c.Commands, cmds...)
+func (c *Container) AddCommand(cmd Cmd, mainName string, aliases ...string) *RegisteredCommand {
+	return c.AddCommandWithMiddleware(cmd, mainName, aliases)
+}
+
+func (c *Container) AddCommandWithMiddleware(cmd Cmd, mainName string, aliases []string, middleWare ...MiddleWareFunc) *RegisteredCommand {
+	names := []string{mainName}
+	if len(aliases) > 0 {
+		names = append(names, aliases...)
+	}
+
+	wrapped := &RegisteredCommand{
+		Command:     cmd,
+		Names:       names,
+		Middlewares: middleWare,
+	}
+
+	c.Commands = append(c.Commands, wrapped)
+	return wrapped
 }
 
 func (c *Container) AddMidlewares(mw ...MiddleWareFunc) {
@@ -201,7 +216,7 @@ func (c *Container) FullName(aliases bool) string {
 		name = c.Parent.FullName(aliases)
 	}
 
-	if len(c.names) < 1 {
+	if len(c.Names) < 1 {
 		return name
 	}
 
@@ -209,7 +224,7 @@ func (c *Container) FullName(aliases bool) string {
 		name += " "
 	}
 
-	for i, v := range c.names {
+	for i, v := range c.Names {
 		if i != 0 && !aliases {
 			return name
 		}

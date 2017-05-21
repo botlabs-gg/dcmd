@@ -25,8 +25,8 @@ func ArgParserMW(inner RunFunc) RunFunc {
 // ParseCmdArgs is the standard argument parser
 // todo, more doc on the format
 func ParseCmdArgs(data *Data) error {
-	argDefsCommand, argDefsOk := data.Cmd.(CmdWithArgDefs)
-	switchesCmd, switchesOk := data.Cmd.(CmdWithSwitches)
+	argDefsCommand, argDefsOk := data.Cmd.Command.(CmdWithArgDefs)
+	switchesCmd, switchesOk := data.Cmd.Command.(CmdWithSwitches)
 
 	if !argDefsOk && !switchesOk {
 		// Command dosen't use the standard arg parsing

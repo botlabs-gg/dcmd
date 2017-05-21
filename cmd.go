@@ -1,5 +1,10 @@
 package dcmd
 
+import (
+	"reflect"
+	"strings"
+)
+
 type Flags int64
 
 const (
@@ -9,12 +14,33 @@ const (
 	IgnorePrefix
 )
 
+// RegisteredCommand represents a registered command to the system.
+// RegisteredCommand.Cmd may exist in other RegisteredCommands but the RegisteredCommand wrapper itself
+// is unique per route
+type RegisteredCommand struct {
+	Command        Cmd
+	Names          []string
+	Middlewares    []MiddleWareFunc
+	BuiltFullChain RunFunc
+}
+
+// FormatNames returns a string with names and if includedAliases is true, aliases seperated by seperator
+// Falls back to reflection if no names are available
+func (r *RegisteredCommand) FormatNames(includeAliases bool, seperator string) string {
+	if len(r.Names) > 0 {
+		if includeAliases {
+			return strings.Join(r.Names, seperator)
+		}
+
+		return r.Names[0]
+	}
+
+	t := reflect.TypeOf(r.Command)
+	return t.Name()
+}
+
 // Cmd is the interface all commands must implement to be considered a command
 type Cmd interface {
-	// Atleast one name needs to be present, the first one will be considered the 'main' one
-	// command names are not case sensitive
-	Names() []string
-
 	// Run the command with the provided data,
 	// response is either string, error, embed or custom that implements CmdResponse
 	// if response is nil, and an error is returned that is not PublicError,

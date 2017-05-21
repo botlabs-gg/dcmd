@@ -6,7 +6,7 @@ import (
 )
 
 type Data struct {
-	Cmd      Cmd
+	Cmd      *RegisteredCommand
 	Args     []*ParsedArg
 	Switches map[string]*ParsedArg
 

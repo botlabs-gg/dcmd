@@ -15,34 +15,33 @@ import (
 
 func main() {
 	system := dcmd.NewStandardSystem("[")
-	system.Root.AddCommands(&StaticCmd{
-		CmdNames:    []string{"Hello", "Hey"},
+
+	heyCmd := &StaticCmd{
 		Response:    "Hey there buddy",
 		Description: "Greets you",
-	}, &StaticCmd{
-		CmdNames:    []string{"Bye", "Bai"},
+	}
+
+	byeCmd := &StaticCmd{
 		Response:    "Bye friendo!",
 		Description: "Parting words",
-	})
+	}
+
+	system.Root.AddCommand(heyCmd, "Hello", "Hey")
+	system.Root.AddCommand(byeCmd, "Bye", "Bai")
 
 	container := system.Root.Sub("container", "c")
 	container.Description = "Some extra seperated commands"
-	container.AddCommands(&StaticCmd{
-		CmdNames:    []string{"Hello", "Hey"},
-		Response:    "Hey there buddy",
-		Description: "Greets you",
-	}, &StaticCmd{
-		CmdNames:    []string{"Bye", "Bai"},
-		Response:    "Bye friendo!",
-		Description: "Parting words",
-	})
+
+	container.AddCommand(heyCmd, "Hello", "Hey")
+	container.AddCommand(byeCmd, "Bye", "Bai")
 
 	tracker := &CommandsStatTracker{
 		CommandUsages: make(map[string]int),
 	}
 
 	system.Root.AddMidlewares(tracker.MiddleWare)
-	system.Root.AddCommands(tracker, dcmd.NewStdHelpCommand("help"))
+	system.Root.AddCommand(tracker, "stats")
+	system.Root.AddCommand(dcmd.NewStdHelpCommand(), "help", "h")
 
 	session, err := discordgo.New(os.Getenv("DG_TOKEN"))
 	if err != nil {
@@ -92,14 +91,14 @@ func (c *CommandsStatTracker) MiddleWare(inner dcmd.RunFunc) dcmd.RunFunc {
 		// The container chain is just a slice of all the containers the command is in, the first will always be the root
 		name := ""
 		for _, c := range d.ContainerChain {
-			if len(c.Names()) < 1 || c.Names()[0] == "" {
+			if len(c.Names) < 1 || c.Names[0] == "" {
 				continue
 			}
-			name += c.Names()[0] + " "
+			name += c.Names[0] + " "
 		}
 
 		// Finally append the actual command name
-		name += d.Cmd.Names()[0]
+		name += d.Cmd.Names[0]
 
 		c.CommandUsagesLock.Lock()
 		c.CommandUsages[name]++
@@ -107,11 +106,6 @@ func (c *CommandsStatTracker) MiddleWare(inner dcmd.RunFunc) dcmd.RunFunc {
 
 		return inner(d)
 	}
-}
-
-// Also have the CommandStatTracker implement the Cmd interface to easily add a command that dumps the stats
-func (c *CommandsStatTracker) Names() []string {
-	return []string{"CommandStats", "CmdStats"}
 }
 
 func (c *CommandsStatTracker) Descriptions() (string, string) {

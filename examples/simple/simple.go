@@ -14,15 +14,15 @@ import (
 
 func main() {
 	system := dcmd.NewStandardSystem("[")
-	system.Root.AddCommands(&StaticCmd{
-		CmdNames:    []string{"Hello", "Hey"},
+	system.Root.AddCommand(&StaticCmd{
 		Response:    "Hey there buddy",
 		Description: "Greets you",
-	}, &StaticCmd{
-		CmdNames:    []string{"Bye", "Bai"},
+	}, "Hello", "Hey")
+
+	system.Root.AddCommand(&StaticCmd{
 		Response:    "Bye friendo!",
 		Description: "Parting words",
-	})
+	}, "Bye", "Bai")
 
 	session, err := discordgo.New(os.Getenv("DISCORD_TOKEN"))
 	if err != nil {
@@ -41,15 +41,12 @@ func main() {
 
 type StaticCmd struct {
 	Response    string
-	CmdNames    []string
 	Description string
 }
 
 // Compilie time assertions, will not compiled unless StaticCmd implements these interfaces
 var _ dcmd.Cmd = (*StaticCmd)(nil)
 var _ dcmd.CmdWithDescriptions = (*StaticCmd)(nil)
-
-func (s *StaticCmd) Names() []string { return s.CmdNames }
 
 // Descriptions should return a short description (used in the overall help overiview) and one long descriptions for targetted help
 func (s *StaticCmd) Descriptions() (string, string) { return s.Description, "" }
