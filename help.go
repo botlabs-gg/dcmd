@@ -62,9 +62,12 @@ func SortCommands(closestGroupContainer *Container, cmdContainer *Container) []*
 	containers := make([]*SortedCommandSet, 0)
 
 	for _, cmd := range cmdContainer.Commands {
+		if cmd.Trigger.HideFromHelp {
+			continue
+		}
+
 		var keyCont *Container
 		var keyCat *Category
-
 		// Merge this containers generated command sets into the current one
 		if c, ok := cmd.Command.(*Container); ok {
 			topGroup := closestGroupContainer

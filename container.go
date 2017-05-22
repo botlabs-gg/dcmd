@@ -82,6 +82,14 @@ func (c *Container) Run(data *Data) (interface{}, error) {
 
 		// No handler to run, do nothing...
 		return nil, nil
+	} else {
+		if matchingCmd.Trigger.DisableInDM && data.Source == DMSource {
+			// Disabled in dms
+			return nil, nil
+		} else if matchingCmd.Trigger.DisableOutsideDM && data.Source != DMSource {
+			// Disabled outside dms
+			return nil, nil
+		}
 	}
 
 	data.MsgStrippedPrefix = rest
