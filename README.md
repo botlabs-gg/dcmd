@@ -13,11 +13,6 @@ For now look in the example folder. Still planning things out.
  - [ ] Full test coverage (See below for info on progress)
  - [ ] Only build middleware chains once?
  - [x] Standard Help generator
- - Flags
-      + [ ] FlagHideFromHelp
-      + [ ] FlagRunInDM
-      + [ ] FlagIgnoreMentions
-      + [ ] FlagIgnorePrefix
 
 ## Test Coverage:
 

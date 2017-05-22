@@ -102,8 +102,14 @@ func (c *Container) Run(data *Data) (interface{}, error) {
 
 	// Build the run chain
 	var last RunFunc = matchingCmd.Command.Run
-	for i := range data.ContainerChain {
-		last = data.ContainerChain[len(data.ContainerChain)-1-i].buildMiddlewareChain(last)
+
+	// User either prebuilt middleware chain, or build it live
+	if matchingCmd.builtFullMiddlewareChain != nil {
+		last = matchingCmd.builtFullMiddlewareChain
+	} else {
+		for i := range data.ContainerChain {
+			last = data.ContainerChain[len(data.ContainerChain)-1-i].buildMiddlewareChain(last, matchingCmd)
+		}
 	}
 
 	return last(data)
@@ -200,9 +206,13 @@ func (c *Container) AddMidlewares(mw ...MiddleWareFunc) {
 	c.middlewares = append(c.middlewares, mw...)
 }
 
-func (c *Container) buildMiddlewareChain(r RunFunc) RunFunc {
+func (c *Container) buildMiddlewareChain(r RunFunc, cmd *RegisteredCommand) RunFunc {
 	for i := range c.middlewares {
 		r = c.middlewares[len(c.middlewares)-1-i](r)
+	}
+
+	for i := range cmd.Trigger.Middlewares {
+		r = cmd.Trigger.Middlewares[len(cmd.Trigger.Middlewares)-1-i](r)
 	}
 
 	return r
@@ -234,4 +244,23 @@ func (c *Container) FullName(aliases bool) string {
 	}
 
 	return name
+}
+
+// BuildMiddlewareChains builds all the middleware chains and chaches them.
+// It is reccomended to call this after adding all commands and middleware to avoid building the chains everytime
+// a command is invoked
+func (c *Container) BuildMiddlewareChains(containerChain []*Container) {
+	containerChain = append(containerChain, c)
+	for _, cmd := range c.Commands {
+		if cast, ok := cmd.Command.(*Container); ok {
+			cast.BuildMiddlewareChains(containerChain)
+			continue
+		}
+
+		last := cmd.Command.Run
+		for i := range containerChain {
+			last = containerChain[len(containerChain)-1-i].buildMiddlewareChain(last, cmd)
+		}
+		cmd.builtFullMiddlewareChain = last
+	}
 }

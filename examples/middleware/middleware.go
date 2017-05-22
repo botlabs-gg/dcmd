@@ -42,6 +42,7 @@ func main() {
 	system.Root.AddMidlewares(tracker.MiddleWare)
 	system.Root.AddCommand(tracker, dcmd.NewTrigger("stats"))
 	system.Root.AddCommand(dcmd.NewStdHelpCommand(), dcmd.NewTrigger("help", "h"))
+	system.Root.BuildMiddlewareChains(nil)
 
 	session, err := discordgo.New(os.Getenv("DG_TOKEN"))
 	if err != nil {
