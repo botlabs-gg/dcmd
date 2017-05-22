@@ -17,7 +17,7 @@ func main() {
 	system := dcmd.NewStandardSystem("[")
 
 	// Add the time of day command to the root container of the system
-	system.Root.AddCommand(&CmdTimeOfDay{Format: time.RFC822}, "Time", "t")
+	system.Root.AddCommand(&CmdTimeOfDay{Format: time.RFC822}, dcmd.NewTrigger("Time", "t"))
 
 	// Create the discordgo session
 	session, err := discordgo.New(os.Getenv("DG_TOKEN"))

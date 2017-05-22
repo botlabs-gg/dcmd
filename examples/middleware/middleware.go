@@ -26,22 +26,22 @@ func main() {
 		Description: "Parting words",
 	}
 
-	system.Root.AddCommand(heyCmd, "Hello", "Hey")
-	system.Root.AddCommand(byeCmd, "Bye", "Bai")
+	system.Root.AddCommand(heyCmd, dcmd.NewTrigger("Hello", "Hey"))
+	system.Root.AddCommand(byeCmd, dcmd.NewTrigger("Bye", "Bai"))
 
 	container := system.Root.Sub("container", "c")
 	container.Description = "Some extra seperated commands"
 
-	container.AddCommand(heyCmd, "Hello", "Hey")
-	container.AddCommand(byeCmd, "Bye", "Bai")
+	container.AddCommand(heyCmd, dcmd.NewTrigger("Hello", "Hey"))
+	container.AddCommand(byeCmd, dcmd.NewTrigger("Bye", "Bai"))
 
 	tracker := &CommandsStatTracker{
 		CommandUsages: make(map[string]int),
 	}
 
 	system.Root.AddMidlewares(tracker.MiddleWare)
-	system.Root.AddCommand(tracker, "stats")
-	system.Root.AddCommand(dcmd.NewStdHelpCommand(), "help", "h")
+	system.Root.AddCommand(tracker, dcmd.NewTrigger("stats"))
+	system.Root.AddCommand(dcmd.NewStdHelpCommand(), dcmd.NewTrigger("help", "h"))
 
 	session, err := discordgo.New(os.Getenv("DG_TOKEN"))
 	if err != nil {
@@ -95,7 +95,7 @@ func (c *CommandsStatTracker) MiddleWare(inner dcmd.RunFunc) dcmd.RunFunc {
 		}
 
 		// Finally append the actual command name
-		name += d.Cmd.Names[0]
+		name += d.Cmd.Trigger.Names[0]
 
 		c.CommandUsagesLock.Lock()
 		c.CommandUsages[name]++

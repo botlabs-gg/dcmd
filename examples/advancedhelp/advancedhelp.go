@@ -20,36 +20,36 @@ func main() {
 	}
 
 	system := dcmd.NewStandardSystem("[")
-	system.Root.AddCommand(dcmd.NewStdHelpCommand(), "Help", "h")
+	system.Root.AddCommand(dcmd.NewStdHelpCommand(), dcmd.NewTrigger("Help", "h"))
 	system.Root.AddCommand(&StaticCmd{
 		Desc:     "Shows bot status",
 		LongDesc: "Shows bot status such as uptime, and how many resources the bot uses",
-	}, "Status", "st")
+	}, dcmd.NewTrigger("Status", "st"))
 	system.Root.AddCommand(&StaticCmd{
 		Desc: "Shows general bot information",
-	}, "Info", "i")
+	}, dcmd.NewTrigger("Info", "i"))
 	system.Root.AddCommand(&StaticCmd{
 		Desc: "Ask the bot a yes/no question",
-	}, "8ball", "ball", "8")
+	}, dcmd.NewTrigger("8ball", "ball", "8"))
 	system.Root.AddCommand(&StaticCmd{
 		Desc: "Pokes a user on your server",
-	}, "Poke")
+	}, dcmd.NewTrigger("Poke"))
 	system.Root.AddCommand(&StaticCmd{
 		Desc: "Warns a user",
 		Cat:  modCat,
-	}, "Warn")
+	}, dcmd.NewTrigger("Warn"))
 	system.Root.AddCommand(&StaticCmd{
 		Desc: "Kicks a user",
 		Cat:  modCat,
-	}, "Kick")
+	}, dcmd.NewTrigger("Kick"))
 	system.Root.AddCommand(&StaticCmd{
 		Desc: "Bans a user",
 		Cat:  modCat,
-	}, "Ban")
+	}, dcmd.NewTrigger("Ban"))
 	system.Root.AddCommand(&StaticCmd{
 		Desc: "Mutes a user",
 		Cat:  modCat,
-	}, "Mute")
+	}, dcmd.NewTrigger("Mute"))
 
 	musicContainer := system.Root.Sub("music", "m")
 	musicContainer.HelpOwnEmbed = true
@@ -58,24 +58,24 @@ func main() {
 	musicContainer.AddCommand(&StaticCmd{
 		Desc:     "Joins your current voice channel",
 		LongDesc: "Makes the bot join your current voice channel, can also be used to move it.",
-	}, "join", "j")
+	}, dcmd.NewTrigger("join", "j"))
 
 	musicContainer.AddCommand(&StaticCmd{
 		Desc: "Queues up or starts playing a song, either by url or by searching what you wrote",
 		LongDesc: "Queues up or starts playing a song, either by url or by searching what you wrote\nExamples:\n" +
 			"`play c2c down the road` - will search for the song and play the first search result\n`play https://www.youtube.com/watch?v=k1uUIJPD0Nk` - will play the specific linked video",
-	}, "Play", "p")
+	}, dcmd.NewTrigger("Play", "p"))
 
 	musicContainer.AddCommand(&StaticCmd{
 		Desc: "Shows the current queue",
-	}, "Queue", "q")
+	}, dcmd.NewTrigger("Queue", "q"))
 	musicContainer.AddCommand(&StaticCmd{
 		Desc: "Skips the current video, if you're not a moderator the majority will have to vote in favor",
-	}, "Skip", "S")
+	}, dcmd.NewTrigger("Skip", "S"))
 
 	musicContainer.AddCommand(&StaticCmd{
 		Desc: "Sets the volume, accepts a number between `1-100`",
-	}, "Volume", "vol", "v")
+	}, dcmd.NewTrigger("Volume", "vol", "v"))
 
 	session, err := discordgo.New(os.Getenv("DG_TOKEN"))
 	if err != nil {

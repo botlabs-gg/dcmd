@@ -48,7 +48,7 @@ func main() {
       system := dcmd.NewStandardSystem("[")
 
       // Add the time of day command to the root container of the system
-      system.Root.AddCommand(&CmdTimeOfDay{Format: time.RFC822}, "Time", "t")
+      system.Root.AddCommand(&CmdTimeOfDay{Format: time.RFC822}, dcmd.NewTrigger("Time", "t"))
 
       // Create the discordgo session
       session, err := discordgo.New(os.Getenv("DG_TOKEN"))
@@ -72,7 +72,7 @@ type CmdTimeOfDay struct {
 }
 
 // Descriptions should return a short description (used in the overall help overiview) and one long descriptions for targetted help
-func (t *CmdTimeOfDay) Descriptions(data *dcmd.Data) (string, string) {
+func (t *CmdTimeOfDay) Descriptions(d *dcmd.Data) (string, string) {
       return "Responds with the current time in utc", ""
 }
 
@@ -81,8 +81,5 @@ func (t *CmdTimeOfDay) Run(data *dcmd.Data) (interface{}, error) {
       return time.Now().UTC().Format(t.Format), nil
 }
 
-// Compilie time assertions, will be not compiled unless CmdTimeOfDay implements these interfaces
-var _ dcmd.Cmd = (*CmdTimeOfDay)(nil)
-var _ dcmd.CmdWithDescriptions = (*CmdTimeOfDay)(nil)
 
 ```

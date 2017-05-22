@@ -17,12 +17,12 @@ func main() {
 	system.Root.AddCommand(&StaticCmd{
 		Response:    "Hey there buddy",
 		Description: "Greets you",
-	}, "Hello", "Hey")
+	}, dcmd.NewTrigger("Hello", "Hey"))
 
 	system.Root.AddCommand(&StaticCmd{
 		Response:    "Bye friendo!",
 		Description: "Parting words",
-	}, "Bye", "Bai")
+	}, dcmd.NewTrigger("Bye", "Bai"))
 
 	session, err := discordgo.New(os.Getenv("DISCORD_TOKEN"))
 	if err != nil {

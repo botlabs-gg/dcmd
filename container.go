@@ -121,7 +121,7 @@ func (c *Container) FindCommand(searchStr string) (cmd *RegisteredCommand, rest 
 
 	// Start looking for matches in all subcommands
 	for _, c := range c.Commands {
-		names := c.Names
+		names := c.Trigger.Names
 		for _, name := range names {
 			if !strings.EqualFold(name, split[0]) {
 				continue
@@ -173,25 +173,15 @@ func (c *Container) Sub(mainName string, aliases ...string) *Container {
 	cop.LongDescription = ""
 	cop.Parent = c
 
-	c.AddCommandWithMiddleware(cop, mainName, aliases)
+	c.AddCommand(cop, NewTrigger(mainName, aliases...))
 
 	return cop
 }
 
-func (c *Container) AddCommand(cmd Cmd, mainName string, aliases ...string) *RegisteredCommand {
-	return c.AddCommandWithMiddleware(cmd, mainName, aliases)
-}
-
-func (c *Container) AddCommandWithMiddleware(cmd Cmd, mainName string, aliases []string, middleWare ...MiddleWareFunc) *RegisteredCommand {
-	names := []string{mainName}
-	if len(aliases) > 0 {
-		names = append(names, aliases...)
-	}
-
+func (c *Container) AddCommand(cmd Cmd, trigger *Trigger) *RegisteredCommand {
 	wrapped := &RegisteredCommand{
-		Command:     cmd,
-		Names:       names,
-		Middlewares: middleWare,
+		Command: cmd,
+		Trigger: trigger,
 	}
 
 	c.Commands = append(c.Commands, wrapped)

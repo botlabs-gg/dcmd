@@ -5,34 +5,24 @@ import (
 	"strings"
 )
 
-type Flags int64
-
-const (
-	FlagHideFromHelp Flags = 1 << iota
-	FlagRunInDM
-	FlagIgnoreMentions
-	FlagIgnorePrefix
-)
-
 // RegisteredCommand represents a registered command to the system.
 // RegisteredCommand.Cmd may exist in other RegisteredCommands but the RegisteredCommand wrapper itself
 // is unique per route
 type RegisteredCommand struct {
-	Command        Cmd
-	Names          []string
-	Middlewares    []MiddleWareFunc
-	BuiltFullChain RunFunc
+	Command                  Cmd
+	Trigger                  *Trigger
+	builtFullMiddlewareChain RunFunc
 }
 
 // FormatNames returns a string with names and if includedAliases is true, aliases seperated by seperator
 // Falls back to reflection if no names are available
 func (r *RegisteredCommand) FormatNames(includeAliases bool, seperator string) string {
-	if len(r.Names) > 0 {
+	if len(r.Trigger.Names) > 0 {
 		if includeAliases {
-			return strings.Join(r.Names, seperator)
+			return strings.Join(r.Trigger.Names, seperator)
 		}
 
-		return r.Names[0]
+		return r.Trigger.Names[0]
 	}
 
 	t := reflect.TypeOf(r.Command)
@@ -123,14 +113,6 @@ type CmdWithSwitches interface {
 	Switches() []*ArgDef
 }
 
-// CmdWithFlags commands has special bit flags.
-type CmdWithFlags interface {
-
-	// Returns the flags for this command
-	// The first 16 bits are reserved by the package. the rest can be given any meaning you want
-	Flags() Flags
-}
-
 // CmdWithCanUse commands can use this to hide certain commands from people for example
 type CmdWithCanUse interface {
 	CanUse(data *Data) (bool, error)
@@ -165,15 +147,4 @@ type CmdDescArgDefs interface {
 
 	CmdWithDescriptions
 	CmdWithArgDefs
-}
-
-// CmdLongArgDefsFlags is a helper for easily adding a compile time assertion
-// Example: `var _ CmdLongArgDefsFlags = (YourCommandType)(nil)`
-// will fail to compile if you do not implement this interface correctly
-type CmdDescArgDefsFlags interface {
-	Cmd
-
-	CmdWithDescriptions
-	CmdWithArgDefs
-	CmdWithFlags
 }
