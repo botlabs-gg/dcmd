@@ -107,6 +107,11 @@ func (c *Container) Run(data *Data) (interface{}, error) {
 	if matchingCmd.builtFullMiddlewareChain != nil {
 		last = matchingCmd.builtFullMiddlewareChain
 	} else {
+
+		for i := range matchingCmd.Trigger.Middlewares {
+			last = matchingCmd.Trigger.Middlewares[len(matchingCmd.Trigger.Middlewares)-1-i](last)
+		}
+
 		for i := range data.ContainerChain {
 			last = data.ContainerChain[len(data.ContainerChain)-1-i].buildMiddlewareChain(last, matchingCmd)
 		}
@@ -185,6 +190,7 @@ func (c *Container) Sub(mainName string, aliases ...string) *Container {
 	cop.Names = append([]string{mainName}, aliases...)
 	cop.Description = ""
 	cop.LongDescription = ""
+	cop.middlewares = nil
 	cop.Parent = c
 
 	c.AddCommand(cop, NewTrigger(mainName, aliases...))
@@ -209,10 +215,6 @@ func (c *Container) AddMidlewares(mw ...MiddleWareFunc) {
 func (c *Container) buildMiddlewareChain(r RunFunc, cmd *RegisteredCommand) RunFunc {
 	for i := range c.middlewares {
 		r = c.middlewares[len(c.middlewares)-1-i](r)
-	}
-
-	for i := range cmd.Trigger.Middlewares {
-		r = cmd.Trigger.Middlewares[len(cmd.Trigger.Middlewares)-1-i](r)
 	}
 
 	return r
@@ -258,6 +260,11 @@ func (c *Container) BuildMiddlewareChains(containerChain []*Container) {
 		}
 
 		last := cmd.Command.Run
+
+		for i := range cmd.Trigger.Middlewares {
+			last = cmd.Trigger.Middlewares[len(cmd.Trigger.Middlewares)-1-i](last)
+		}
+
 		for i := range containerChain {
 			last = containerChain[len(containerChain)-1-i].buildMiddlewareChain(last, cmd)
 		}

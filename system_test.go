@@ -18,15 +18,18 @@ var (
 
 type TestCommand struct{}
 
-func (e *TestCommand) Names() []string          { return []string{"test"} }
+const (
+	TestResponse = "Test Response"
+)
+
 func (e *TestCommand) ShortDescription() string { return "Test Description" }
 func (e *TestCommand) Run(data *Data) (interface{}, error) {
-	return "Test Response", nil
+	return TestResponse, nil
 }
 
 func SetupTestSystem() {
 	testSystem = NewStandardSystem("!")
-	testSystem.Root.AddCommands(&TestCommand{})
+	testSystem.Root.AddCommand(&TestCommand{}, NewTrigger("test"))
 
 	testSession = &discordgo.Session{
 		State: &discordgo.State{
