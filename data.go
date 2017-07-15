@@ -2,7 +2,7 @@ package dcmd
 
 import (
 	"context"
-	"github.com/bwmarrin/discordgo"
+	"github.com/jonas747/discordgo"
 )
 
 type Data struct {

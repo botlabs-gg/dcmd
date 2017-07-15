@@ -1,7 +1,7 @@
 package dcmd
 
 import (
-	"github.com/bwmarrin/discordgo"
+	"github.com/jonas747/discordgo"
 	"strconv"
 	"strings"
 )
