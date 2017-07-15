@@ -21,7 +21,7 @@ func TestMiddlewareOrder(t *testing.T) {
 		}
 	}, func(inner RunFunc) RunFunc {
 		return func(d *Data) (interface{}, error) {
-			// This middleware should be ran first
+			// This middleware should be ran second
 			if i != 1 {
 				t.Error("Unordered:", i, "expected 1")
 			}
@@ -34,7 +34,7 @@ func TestMiddlewareOrder(t *testing.T) {
 	cmd := &TestCommand{}
 	container.AddCommand(cmd, NewTrigger("test").SetMiddlewares(func(inner RunFunc) RunFunc {
 		return func(d *Data) (interface{}, error) {
-			// This middleware should be ran first
+			// This middleware should be ran before cmd1, but not for anything else
 			if i != 2 {
 				t.Error("Unordered:", i, "expected 2")
 			}
@@ -47,7 +47,7 @@ func TestMiddlewareOrder(t *testing.T) {
 	sub := container.Sub("sub")
 	sub.AddMidlewares(func(inner RunFunc) RunFunc {
 		return func(d *Data) (interface{}, error) {
-			// This middleware should be ran first
+			// This middleware should be ran first in sub1, after the parent container
 			if i != 2 {
 				t.Error("Unordered:", i, "expected 2")
 			}
@@ -59,7 +59,7 @@ func TestMiddlewareOrder(t *testing.T) {
 
 	sub.AddCommand(cmd, NewTrigger("test").SetMiddlewares(func(inner RunFunc) RunFunc {
 		return func(d *Data) (interface{}, error) {
-			// This middleware should be ran first
+			// This middleware should be ran before cmd in the sub container, but not for anything else
 			if i != 3 {
 				t.Error("Unordered:", i, "expected 3")
 			}
@@ -78,13 +78,21 @@ func TestMiddlewareOrder(t *testing.T) {
 		Source:            PrefixSource,
 	}
 
-	container.Run(data1)
-	i = 0
-	resp, _ := container.Run(data2)
-	if i != 4 {
-		t.Error("i: ", i, "Expected 4")
+	doTest := func() {
+		i = 0
+		container.Run(data1)
+		i = 0
+		resp, _ := container.Run(data2)
+		if i != 4 {
+			t.Error("i: ", i, "Expected 4")
+		}
+		if resp != TestResponse {
+			t.Error("Response: ", resp, ", Expected: ", TestResponse)
+		}
 	}
-	if resp != TestResponse {
-		t.Error("Response: ", resp, ", Expected: ", TestResponse)
-	}
+
+	doTest()
+	t.Log("Testing prebuilt chains")
+	container.BuildMiddlewareChains(nil)
+	doTest()
 }
