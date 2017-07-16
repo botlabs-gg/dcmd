@@ -70,13 +70,9 @@ func ParseArgDefs(defs []*ArgDef, required int, combos [][]int, data *Data, spli
 	}
 
 	parsedArgs := NewParsedArgs(defs)
-
 	for i, v := range combo {
 		def := defs[v]
 		if i >= len(split) {
-			if len(combos) < 1 && i <= required {
-				break
-			}
 			return ErrNotEnoughArguments
 		}
 
