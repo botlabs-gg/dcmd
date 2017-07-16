@@ -325,6 +325,7 @@ type StdHelpCommand struct {
 var (
 	_ Cmd                 = (*StdHelpCommand)(nil)
 	_ CmdWithDescriptions = (*StdHelpCommand)(nil)
+	_ CmdWithArgDefs      = (*StdHelpCommand)(nil)
 )
 
 func NewStdHelpCommand() *StdHelpCommand {
@@ -338,7 +339,7 @@ func (h *StdHelpCommand) Descriptions(data *Data) (string, string) {
 		"\n\n**Examples:**\n`help` - Shows a short summary about all commands\n`help info` - Shows a longer help message for info, can contain examples of how to use it.\nYou are currently reading the longer help message about the `help` command"
 }
 
-func (h *StdHelpCommand) ArgDefs() (args []*ArgDef, required int, combos [][]int) {
+func (h *StdHelpCommand) ArgDefs(data *Data) (args []*ArgDef, required int, combos [][]int) {
 	return []*ArgDef{
 		{Name: "Command", Type: String},
 	}, 0, nil
