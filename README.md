@@ -32,7 +32,6 @@ For now look in the example folder. Still planning things out.
       + [ ] Middleware chaining
       + [ ] Add/Remove middleware
       + [ ] Command searching
-      + [ ] 
  - Other
       + [ ] Help
 

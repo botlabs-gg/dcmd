@@ -2,6 +2,7 @@ package dcmd
 
 import (
 	"github.com/jonas747/discordgo"
+	"github.com/jonas747/dutil/dstate"
 	"strconv"
 	"strings"
 )
@@ -204,7 +205,10 @@ func (u *UserArg) Parse(part string, data *Data) (interface{}, error) {
 		return nil, &ImproperMention{part}
 	} else if !u.RequireMention {
 		// Search for username
-		return FindDiscordUser(part, data.Guild)
+		data.GS.RLock()
+		u, err := FindDiscordUserByName(part, data.GS.Members)
+		data.GS.RUnlock()
+		return u, err
 	}
 
 	return nil, &ImproperMention{part}
@@ -217,18 +221,27 @@ func (u *UserArg) HelpName() string {
 	return "User"
 }
 
-func FindDiscordUser(str string, guild *discordgo.Guild) (*discordgo.User, error) {
-	if guild == nil {
-		return nil, &UserNotFound{str}
-	}
-
-	for _, v := range guild.Members {
+func FindDiscordUserByName(str string, members map[string]*dstate.MemberState) (*discordgo.User, error) {
+	for _, v := range members {
 		if v == nil {
 			continue
 		}
 
-		if strings.EqualFold(str, v.User.Username) {
-			return v.User, nil
+		var user *discordgo.User
+		if v.Member != nil {
+			user = v.Member.User
+		} else if v.Presence != nil {
+			user = v.Presence.User
+		}
+
+		if user == nil || user.Username == "" {
+			continue
+		}
+
+		if strings.EqualFold(str, user.Username) {
+			cop := new(discordgo.User)
+			*cop = *user
+			return cop, nil
 		}
 	}
 

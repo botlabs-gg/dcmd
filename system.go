@@ -3,6 +3,7 @@ package dcmd
 import (
 	"fmt"
 	"github.com/jonas747/discordgo"
+	"github.com/jonas747/dutil/dstate"
 	"github.com/pkg/errors"
 	"log"
 	"runtime/debug"
@@ -13,6 +14,7 @@ type System struct {
 	Root           *Container
 	Prefix         PrefixProvider
 	ResponseSender ResponseSender
+	State          *dstate.State
 }
 
 func NewStandardSystem(staticPrefix string) (system *System) {
@@ -65,7 +67,7 @@ func (sys *System) CheckMessage(s *discordgo.Session, m *discordgo.MessageCreate
 // FindPrefix checks if the message has a proper command prefix (either from the PrefixProvider or a direction mention to the bot)
 // It sets the source field, and MsgStripped in data if found
 func (sys *System) FindPrefix(data *Data) (found bool) {
-	if data.Channel.Type == discordgo.ChannelTypeDM {
+	if data.CS.Type() == discordgo.ChannelTypeDM {
 		data.MsgStrippedPrefix = data.Msg.Content
 		data.Source = DMSource
 		return true
@@ -127,26 +129,25 @@ func (sys *System) FindMentionPrefix(data *Data) (found bool) {
 
 }
 
+var (
+	ErrChannelNotFound = errors.New("Channel not found")
+)
+
 func (sys *System) FillData(s *discordgo.Session, m *discordgo.Message) (*Data, error) {
-	channel, err := s.State.Channel(m.ChannelID)
-	if err != nil {
-		return nil, errors.Wrap(err, "System.FillData")
+	cs := sys.State.Channel(true, m.ChannelID)
+	if cs == nil {
+		return nil, ErrChannelNotFound
 	}
 
 	data := &Data{
 		Msg:     m,
-		Channel: channel,
+		CS:      cs,
 		Session: s,
 		System:  sys,
 	}
 
-	if channel.Type == discordgo.ChannelTypeGuildText || channel.Type == discordgo.ChannelTypeGuildCategory {
-		g, err := s.State.Guild(channel.GuildID)
-		if err != nil {
-			return nil, errors.Wrap(err, "System.FillData")
-		}
-
-		data.Guild = g
+	if cs.Type() == discordgo.ChannelTypeGuildText || cs.Type() == discordgo.ChannelTypeGuildCategory {
+		data.GS = cs.Guild
 	} else {
 		data.Source = DMSource
 	}

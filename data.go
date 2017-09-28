@@ -3,6 +3,7 @@ package dcmd
 import (
 	"context"
 	"github.com/jonas747/discordgo"
+	"github.com/jonas747/dutil/dstate"
 )
 
 type Data struct {
@@ -11,8 +12,8 @@ type Data struct {
 	Switches map[string]*ParsedArg
 
 	Msg     *discordgo.Message
-	Channel *discordgo.Channel
-	Guild   *discordgo.Guild
+	CS      *dstate.ChannelState
+	GS      *dstate.GuildState
 	Session *discordgo.Session
 	Source  TriggerSource
 
