@@ -231,7 +231,7 @@ func (s *StdHelpFormatter) ShortCmdHelp(cmd *RegisteredCommand, container *Conta
 		}
 	}
 
-	return fmt.Sprintf("`%s`%s\n", nameStr, desc)
+	return fmt.Sprintf("**`%s`**%s\n\n", nameStr, desc)
 }
 
 func (s *StdHelpFormatter) CmdNameString(cmd *RegisteredCommand, container *Container, containerAliases bool) string {
