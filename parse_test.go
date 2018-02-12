@@ -41,3 +41,36 @@ func TestParseArgDefs(t *testing.T) {
 		})
 	}
 }
+
+func TestParseSwitches(t *testing.T) {
+	cases := []struct {
+		name         string
+		input        string
+		defs         []*ArgDef
+		expectedArgs []*ParsedArg
+	}{
+		{"simple int", "-i 15", []*ArgDef{{Switch: "i", Type: Int}}, []*ParsedArg{{Value: int64(15)}}},
+		{"simple float", "-f 15.5", []*ArgDef{{Switch: "f", Type: Float}}, []*ParsedArg{{Value: float64(15.5)}}},
+		{"simple string", "-s hello", []*ArgDef{{Switch: "s", Type: String}}, []*ParsedArg{{Value: "hello"}}},
+		{"simple string, long switch", "-string hello", []*ArgDef{{Switch: "string", Type: String}}, []*ParsedArg{{Value: "hello"}}},
+		{"int float", "-i 15 -f 30.5", []*ArgDef{{Switch: "i", Type: Int}, {Switch: "f", Type: Float}}, []*ParsedArg{{Value: int64(15)}, {Value: float64(30.5)}}},
+		{"string int", "-s hey_man -i 30", []*ArgDef{{Switch: "s", Type: String}, {Switch: "i", Type: Int}}, []*ParsedArg{{Value: "hey_man"}, {Value: int64(30)}}},
+		{"quoted strings", "-s1 first -s2 `middle quoted` -s3 last", []*ArgDef{{Switch: "s1", Type: String}, {Switch: "s2", Type: String}, {Switch: "s3", Type: String}}, []*ParsedArg{{Value: "first"}, {Value: "middle quoted"}, {Value: "last"}}},
+	}
+
+	for i, v := range cases {
+		t.Run(fmt.Sprintf("#%d-%s", i, v.name), func(t *testing.T) {
+			d := new(Data)
+
+			_, err := ParseSwitches(v.defs, d, SplitArgs(v.input))
+			if err != nil {
+				t.Fatal("ParseArgDefs returned a bad error", err)
+			}
+
+			// Check if we got the expected output
+			for i, ea := range v.expectedArgs {
+				assert.Equal(t, ea.Value, d.Switches[v.defs[i].Switch].Value, "Should be equal")
+			}
+		})
+	}
+}

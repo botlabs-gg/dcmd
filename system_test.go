@@ -45,11 +45,11 @@ func SetupTestSystem() {
 
 func TestFindPrefix(t *testing.T) {
 	testChannelNoPriv := &discordgo.Channel{
-		IsPrivate: false,
+		Type: discordgo.ChannelTypeGuildText,
 	}
 
 	testChannelPriv := &discordgo.Channel{
-		IsPrivate: true,
+		Type: discordgo.ChannelTypeDM,
 	}
 
 	cases := []struct {

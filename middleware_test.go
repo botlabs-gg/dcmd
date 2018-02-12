@@ -39,7 +39,7 @@ func TestMiddlewareOrder(t *testing.T) {
 				t.Error("Unordered:", i, "expected 2")
 			}
 			i = 3
-			t.Log("mw 3")
+			t.Log("mw 3 cmd")
 			return inner(d)
 		}
 	}))
@@ -52,7 +52,7 @@ func TestMiddlewareOrder(t *testing.T) {
 				t.Error("Unordered:", i, "expected 2")
 			}
 			i = 3
-			t.Log("mw 4")
+			t.Log("mw 4 sub mw")
 			return inner(d)
 		}
 	})
@@ -64,21 +64,21 @@ func TestMiddlewareOrder(t *testing.T) {
 				t.Error("Unordered:", i, "expected 3")
 			}
 			i = 4
-			t.Log("mw 5")
+			t.Log("mw 5 sub cmd")
 			return inner(d)
 		}
 	}))
 
-	data1 := &Data{
-		MsgStrippedPrefix: "test",
-		Source:            PrefixSource,
-	}
-	data2 := &Data{
-		MsgStrippedPrefix: "sub test",
-		Source:            PrefixSource,
-	}
-
 	doTest := func() {
+		data1 := &Data{
+			MsgStrippedPrefix: "test",
+			Source:            PrefixSource,
+		}
+		data2 := &Data{
+			MsgStrippedPrefix: "sub test",
+			Source:            PrefixSource,
+		}
+
 		i = 0
 		container.Run(data1)
 		i = 0

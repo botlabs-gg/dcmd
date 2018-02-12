@@ -125,7 +125,7 @@ func ParseSwitches(switches []*ArgDef, data *Data, split []*RawArg) ([]*RawArg, 
 
 	for i := 0; i < len(split); i++ {
 		raw := split[i]
-		if raw.Container == 0 {
+		if raw.Container != 0 {
 			newRaws = append(newRaws, raw)
 			continue
 		}
