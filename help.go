@@ -307,7 +307,12 @@ func (s *StdHelpFormatter) ArgDefLine(argDefs []*ArgDef, required int) (str stri
 }
 
 func (s *StdHelpFormatter) ArgDef(arg *ArgDef) (str string) {
-	str = fmt.Sprintf("%s:%s", arg.Name, arg.Type.HelpName())
+	tName := "Switch"
+	if arg.Type != nil {
+		tName = arg.Type.HelpName()
+	}
+
+	str = fmt.Sprintf("%s:%s", arg.Name, tName)
 	if arg.Help != "" {
 		str += " - " + arg.Help
 	}
