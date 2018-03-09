@@ -7,7 +7,7 @@ import (
 
 var (
 	ErrNoComboFound       = errors.New("No matching combo found")
-	ErrNotEnoughArguments = errors.New("No enough arguments passed")
+	ErrNotEnoughArguments = errors.New("Not enough arguments passed")
 )
 
 func ArgParserMW(inner RunFunc) RunFunc {
