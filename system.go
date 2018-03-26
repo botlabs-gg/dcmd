@@ -107,7 +107,7 @@ func (sys *System) FindMentionPrefix(data *Data) (found bool) {
 	stripped := ""
 
 	// Check for mention
-	id := data.Session.State.User.ID
+	id := discordgo.StrID(data.Session.State.User.ID)
 	if strings.Index(data.Msg.Content, "<@"+id+">") == 0 { // Normal mention
 		ok = true
 		stripped = strings.Replace(data.Msg.Content, "<@"+id+">", "", 1)

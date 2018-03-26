@@ -197,8 +197,9 @@ func (u *UserArg) Parse(part string, data *Data) (interface{}, error) {
 			id = id[1:]
 		}
 
+		parsed, _ := strconv.ParseInt(id, 10, 64)
 		for _, v := range data.Msg.Mentions {
-			if id == v.ID {
+			if parsed == v.ID {
 				return v, nil
 			}
 		}
@@ -221,7 +222,7 @@ func (u *UserArg) HelpName() string {
 	return "User"
 }
 
-func FindDiscordUserByName(str string, members map[string]*dstate.MemberState) (*discordgo.User, error) {
+func FindDiscordUserByName(str string, members map[int64]*dstate.MemberState) (*discordgo.User, error) {
 	for _, v := range members {
 		if v == nil {
 			continue

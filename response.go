@@ -79,7 +79,7 @@ func (t *TemporaryResponse) Send(data *Data) ([]*discordgo.Message, error) {
 	time.AfterFunc(t.Duration, func() {
 		// do a bulk if 2 or more
 		if len(msgs) > 1 {
-			ids := make([]string, len(msgs))
+			ids := make([]int64, len(msgs))
 			for i, m := range msgs {
 				ids[i] = m.ID
 			}
