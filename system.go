@@ -157,7 +157,7 @@ func (sys *System) FillData(s *discordgo.Session, m *discordgo.Message) (*Data, 
 func (sys *System) handlePanic(s *discordgo.Session, r interface{}, sendChatNotice bool) {
 	// TODO
 	stack := debug.Stack()
-	log.Printf("[DCMD PANIC] %v\n%S", r, string(stack))
+	log.Printf("[DCMD PANIC] %v\n%s", r, string(stack))
 }
 
 // Retrieves the prefix that might be different on a per server basis
