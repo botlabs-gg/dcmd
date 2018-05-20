@@ -228,7 +228,7 @@ func SplitArgs(in string) []*RawArg {
 				rawArgs = append(rawArgs, &RawArg{curBuf, container})
 				curBuf = ""
 				container = 0
-			} else if container == 0 {
+			} else if container == 0 && curBuf == "" {
 				// Check if we should start containing a arg
 				for _, v := range ArgContainers {
 					if v == r {
