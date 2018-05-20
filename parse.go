@@ -7,7 +7,7 @@ import (
 
 var (
 	ErrNoComboFound       = errors.New("No matching combo found")
-	ErrNotEnoughArguments = errors.New("No enough arguments passed")
+	ErrNotEnoughArguments = errors.New("Not enough arguments passed")
 )
 
 func ArgParserMW(inner RunFunc) RunFunc {
@@ -228,7 +228,7 @@ func SplitArgs(in string) []*RawArg {
 				rawArgs = append(rawArgs, &RawArg{curBuf, container})
 				curBuf = ""
 				container = 0
-			} else if container == 0 {
+			} else if container == 0 && curBuf == "" {
 				// Check if we should start containing a arg
 				for _, v := range ArgContainers {
 					if v == r {
