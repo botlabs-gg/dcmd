@@ -67,7 +67,7 @@ func (sys *System) CheckMessage(s *discordgo.Session, m *discordgo.MessageCreate
 // FindPrefix checks if the message has a proper command prefix (either from the PrefixProvider or a direction mention to the bot)
 // It sets the source field, and MsgStripped in data if found
 func (sys *System) FindPrefix(data *Data) (found bool) {
-	if data.CS.Type() == discordgo.ChannelTypeDM {
+	if data.CS.Type == discordgo.ChannelTypeDM {
 		data.MsgStrippedPrefix = data.Msg.Content
 		data.Source = DMSource
 		return true
@@ -146,7 +146,7 @@ func (sys *System) FillData(s *discordgo.Session, m *discordgo.Message) (*Data, 
 		System:  sys,
 	}
 
-	if cs.Type() == discordgo.ChannelTypeGuildText || cs.Type() == discordgo.ChannelTypeGuildCategory {
+	if cs.Type == discordgo.ChannelTypeGuildText || cs.Type == discordgo.ChannelTypeGuildCategory {
 		data.GS = cs.Guild
 	} else {
 		data.Source = DMSource

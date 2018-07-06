@@ -228,21 +228,12 @@ func FindDiscordUserByName(str string, members map[int64]*dstate.MemberState) (*
 			continue
 		}
 
-		var user *discordgo.User
-		if v.Member != nil {
-			user = v.Member.User
-		} else if v.Presence != nil {
-			user = v.Presence.User
-		}
-
-		if user == nil || user.Username == "" {
+		if v.Username == "" {
 			continue
 		}
 
-		if strings.EqualFold(str, user.Username) {
-			cop := new(discordgo.User)
-			*cop = *user
-			return cop, nil
+		if strings.EqualFold(str, v.Username) {
+			return v.DGoUser(), nil
 		}
 	}
 
