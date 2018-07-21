@@ -211,41 +211,50 @@ func SplitArgs(in string) []*RawArg {
 		}
 
 		// Check for other special tokens
-		isSpecialToken := false
-		if !escape {
-			isSpecialToken = true
-
-			if r == ' ' {
-				// Maybe seperate by space
-				if curBuf != "" && container == 0 {
-					rawArgs = append(rawArgs, &RawArg{curBuf, 0})
-					curBuf = ""
-				} else if container != 0 { // If it is quoted proceed as it was a normal rune
-					isSpecialToken = false
-				}
-			} else if r == container && container != 0 && !escape {
-				// Split arg here
+		isSpecialToken := true
+		if r == ' ' {
+			// Maybe seperate by space
+			if curBuf != "" && container == 0 && !escape {
+				rawArgs = append(rawArgs, &RawArg{curBuf, 0})
+				curBuf = ""
+			} else if curBuf != "" {
+				curBuf += " "
+			}
+		} else if r == container && container != 0 {
+			// Split arg here
+			if escape {
+				curBuf += string(r)
+			} else {
 				rawArgs = append(rawArgs, &RawArg{curBuf, container})
 				curBuf = ""
 				container = 0
-			} else if container == 0 && curBuf == "" {
-				// Check if we should start containing a arg
-				for _, v := range ArgContainers {
-					if v == r {
+			}
+		} else if container == 0 && curBuf == "" {
+			// Check if we should start containing a arg
+			foundMatch := false
+			for _, v := range ArgContainers {
+				if v == r {
+					if escape {
+						curBuf += string(r)
+					} else {
 						container = v
-						break
 					}
+					foundMatch = true
+					break
 				}
+			}
 
-				if container == 0 {
-					isSpecialToken = false
-				}
-			} else {
+			if !foundMatch {
 				isSpecialToken = false
 			}
+		} else {
+			isSpecialToken = false
 		}
 
 		if !isSpecialToken {
+			if escape {
+				curBuf += "\\"
+			}
 			curBuf += string(r)
 		}
 

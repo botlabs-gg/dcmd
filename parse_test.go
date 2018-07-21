@@ -19,6 +19,9 @@ func TestParseArgDefs(t *testing.T) {
 		{"int float", "15 30.5", []*ArgDef{{Type: Int}, {Type: Float}}, []*ParsedArg{{Value: int64(15)}, {Value: float64(30.5)}}},
 		{"string int", "hey_man 30", []*ArgDef{{Type: String}, {Type: Int}}, []*ParsedArg{{Value: "hey_man"}, {Value: int64(30)}}},
 		{"quoted strings", "first `middle quoted` last", []*ArgDef{{Type: String}, {Type: String}, {Type: String}}, []*ParsedArg{{Value: "first"}, {Value: "middle quoted"}, {Value: "last"}}},
+		{"escape space", "first\\ still\\ first second", []*ArgDef{{Type: String}, {Type: String}}, []*ParsedArg{{Value: "first still first"}, {Value: "second"}}},
+		{"escape container", "`first \\` still first` second", []*ArgDef{{Type: String}, {Type: String}}, []*ParsedArg{{Value: "first ` still first"}, {Value: "second"}}},
+		{"keep escape character", "first\\n second", []*ArgDef{{Type: String}, {Type: String}}, []*ParsedArg{{Value: "first\\n"}, {Value: "second"}}},
 	}
 
 	for i, v := range cases {
@@ -36,7 +39,11 @@ func TestParseArgDefs(t *testing.T) {
 					t.Fatal("Unexpected end of parsed args")
 				}
 
-				assert.Equal(t, ea.Value, d.Args[i].Value, "Should be equal")
+				if !assert.Equal(t, ea.Value, d.Args[i].Value, "Should be equal") {
+					for ei, ga := range d.Args {
+						t.Errorf("Parsed arg[%d]: %v", ei, ga.Value)
+					}
+				}
 			}
 		})
 	}
