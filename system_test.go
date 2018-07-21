@@ -8,7 +8,8 @@ import (
 )
 
 const (
-	TestUserID = "105487308693757952"
+	TestUserID    = 105487308693757952
+	TestUserIDStr = "105487308693757952"
 )
 
 var (
@@ -34,8 +35,10 @@ func SetupTestSystem() {
 	testSession = &discordgo.Session{
 		State: &discordgo.State{
 			Ready: discordgo.Ready{
-				User: &discordgo.User{
-					ID: TestUserID,
+				User: &discordgo.SelfUser{
+					User: &discordgo.User{
+						ID: TestUserID,
+					},
 				},
 			},
 		},
@@ -62,9 +65,9 @@ func TestFindPrefix(t *testing.T) {
 	}{
 		{testChannelNoPriv, "!cmd", "cmd", true, PrefixSource, nil},
 		{testChannelNoPriv, "cmd", "cmd", false, PrefixSource, nil},
-		{testChannelNoPriv, "<@" + TestUserID + ">cmd", "cmd", true, MentionSource, []*discordgo.User{&discordgo.User{ID: TestUserID}}},
-		{testChannelNoPriv, "<@" + TestUserID + "> cmd", "cmd", true, MentionSource, []*discordgo.User{&discordgo.User{ID: TestUserID}}},
-		{testChannelNoPriv, "<@" + TestUserID + " cmd", "", false, MentionSource, nil},
+		{testChannelNoPriv, "<@" + TestUserIDStr + ">cmd", "cmd", true, MentionSource, []*discordgo.User{&discordgo.User{ID: TestUserID}}},
+		{testChannelNoPriv, "<@" + TestUserIDStr + "> cmd", "cmd", true, MentionSource, []*discordgo.User{&discordgo.User{ID: TestUserID}}},
+		{testChannelNoPriv, "<@" + TestUserIDStr + " cmd", "", false, MentionSource, nil},
 		{testChannelPriv, "cmd", "cmd", true, DMSource, nil},
 	}
 
@@ -72,7 +75,7 @@ func TestFindPrefix(t *testing.T) {
 		t.Run(fmt.Sprintf("#%d-p:%v-m:%v", k, v.channel == testChannelPriv, v.shouldBeFound), func(t *testing.T) {
 			testData := &Data{
 				Session: testSession,
-				Channel: v.channel,
+				// Channel: v.channel,
 				Msg: &discordgo.Message{
 					Content:  v.msgContent,
 					Mentions: v.mentions,
