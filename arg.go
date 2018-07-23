@@ -269,10 +269,10 @@ func (u *UserIDArg) Parse(part string, data *Data) (interface{}, error) {
 			id = id[1:]
 		}
 
+		parsed, _ := strconv.ParseInt(id, 10, 64)
 		for _, v := range data.Msg.Mentions {
-			if id == v.ID {
-				parsedID, err := strconv.ParseInt(v.ID, 10, 64)
-				return parsedID, err
+			if parsed == v.ID {
+				return parsed, nil
 			}
 		}
 
