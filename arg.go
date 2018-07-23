@@ -102,6 +102,7 @@ var (
 	String         = &StringArg{}
 	User           = &UserArg{}
 	UserReqMention = &UserArg{RequireMention: true}
+	UserID         = &UserIDArg{}
 )
 
 // IntArg matches and parses integer arguments
@@ -233,4 +234,54 @@ func FindDiscordUser(str string, guild *discordgo.Guild) (*discordgo.User, error
 	}
 
 	return nil, &UserNotFound{str}
+}
+
+// UserIDArg matches a mention or a plain id, the user does not have to be a part of the server
+// The type of the ID is parsed into a int64
+type UserIDArg struct{}
+
+func (u *UserIDArg) Matches(part string) bool {
+	// Check for mention
+	if strings.HasPrefix(part, "<@") && strings.HasSuffix(part, ">") {
+		return true
+	}
+
+	// Check for ID
+	_, err := strconv.ParseInt(part, 10, 64)
+	if err == nil {
+		return true
+	}
+
+	return false
+}
+
+func (u *UserIDArg) Parse(part string, data *Data) (interface{}, error) {
+	if strings.HasPrefix(part, "<@") {
+		// Direct mention
+		id := part[2 : len(part)-1]
+		if id[0] == '!' {
+			// Nickname mention
+			id = id[1:]
+		}
+
+		for _, v := range data.Msg.Mentions {
+			if id == v.ID {
+				parsedID, err := strconv.ParseInt(v.ID, 10, 64)
+				return parsedID, err
+			}
+		}
+
+		return nil, &ImproperMention{part}
+	}
+
+	id, err := strconv.ParseInt(part, 10, 64)
+	if err == nil {
+		return id, nil
+	}
+
+	return nil, &ImproperMention{part}
+}
+
+func (u *UserIDArg) HelpName() string {
+	return "Mention/ID"
 }
