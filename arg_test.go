@@ -10,26 +10,26 @@ func TestIntArg(t *testing.T) {
 	part := "123"
 	expected := int64(123)
 
-	assert.True(t, Int.Matches(part), "Should match")
+	assert.True(t, Int.Matches(nil, part), "Should match")
 
-	v, err := Int.Parse(part, nil)
+	v, err := Int.Parse(nil, part, nil)
 	assert.NoError(t, err, "Should parse sucessfully")
 	assert.Equal(t, v, expected, "Should be equal")
 
-	assert.False(t, Int.Matches("12hello21"), "Should not match")
+	assert.False(t, Int.Matches(nil, "12hello21"), "Should not match")
 }
 
 func TestFloatArg(t *testing.T) {
 	part := "12.3"
 	expected := float64(12.3)
 
-	assert.True(t, Float.Matches(part), "Should match")
+	assert.True(t, Float.Matches(nil, part), "Should match")
 
-	v, err := Float.Parse(part, nil)
+	v, err := Float.Parse(nil, part, nil)
 	assert.NoError(t, err, "Should parse sucessfully")
 	assert.Equal(t, v, expected, "Should be equal")
 
-	assert.False(t, Float.Matches("1.2hello21"), "Should not match")
+	assert.False(t, Float.Matches(nil, "1.2hello21"), "Should not match")
 }
 
 func TestUserIDArg(t *testing.T) {
@@ -54,10 +54,10 @@ func TestUserIDArg(t *testing.T) {
 	for _, c := range cases {
 		t.Run("case_"+c.part, func(t *testing.T) {
 			arg := &UserIDArg{}
-			matches := arg.Matches(c.part)
+			matches := arg.Matches(nil, c.part)
 			assert.Equal(t, c.match, matches, "Incorrect match")
 			if matches {
-				parsed, err := arg.Parse(c.part, d)
+				parsed, err := arg.Parse(nil, c.part, d)
 				assert.NoError(t, err, "Should parse sucessfully")
 				assert.Equal(t, c.result, parsed)
 			}

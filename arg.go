@@ -86,10 +86,10 @@ func NewParsedArgs(defs []*ArgDef) []*ParsedArg {
 // ArgType is the interface argument types has to implement,
 type ArgType interface {
 	// Return true if this argument part matches this type
-	Matches(part string) bool
+	Matches(def *ArgDef, part string) bool
 
 	// Attempt to parse it, returning any error if one occured.
-	Parse(part string, data *Data) (val interface{}, err error)
+	Parse(def *ArgDef, part string, data *Data) (val interface{}, err error)
 
 	// Name as shown in help
 	HelpName() string
@@ -111,11 +111,11 @@ type IntArg struct {
 	Min, Max int64
 }
 
-func (i *IntArg) Matches(part string) bool {
+func (i *IntArg) Matches(def *ArgDef, part string) bool {
 	_, err := strconv.ParseInt(part, 10, 64)
 	return err == nil
 }
-func (i *IntArg) Parse(part string, data *Data) (interface{}, error) {
+func (i *IntArg) Parse(def *ArgDef, part string, data *Data) (interface{}, error) {
 	v, err := strconv.ParseInt(part, 10, 64)
 	if err != nil {
 		return nil, &InvalidInt{part}
@@ -124,7 +124,7 @@ func (i *IntArg) Parse(part string, data *Data) (interface{}, error) {
 	// A valid range has been specified
 	if i.Max != i.Min {
 		if i.Max < v || i.Min > v {
-			return nil, &OutOfRangeError{Got: v, Min: i.Min, Max: i.Max}
+			return nil, &OutOfRangeError{ArgName: def.Name, Got: v, Min: i.Min, Max: i.Max}
 		}
 	}
 
@@ -141,11 +141,11 @@ type FloatArg struct {
 	Min, Max float64
 }
 
-func (f *FloatArg) Matches(part string) bool {
+func (f *FloatArg) Matches(def *ArgDef, part string) bool {
 	_, err := strconv.ParseFloat(part, 64)
 	return err == nil
 }
-func (f *FloatArg) Parse(part string, data *Data) (interface{}, error) {
+func (f *FloatArg) Parse(def *ArgDef, part string, data *Data) (interface{}, error) {
 	v, err := strconv.ParseFloat(part, 64)
 	if err != nil {
 		return nil, &InvalidFloat{part}
@@ -154,7 +154,7 @@ func (f *FloatArg) Parse(part string, data *Data) (interface{}, error) {
 	// A valid range has been specified
 	if f.Max != f.Min {
 		if f.Max < v || f.Min > v {
-			return nil, &OutOfRangeError{Got: v, Min: f.Min, Max: f.Max, Float: true}
+			return nil, &OutOfRangeError{ArgName: def.Name, Got: v, Min: f.Min, Max: f.Max, Float: true}
 		}
 	}
 
@@ -168,8 +168,8 @@ func (f *FloatArg) HelpName() string {
 // StringArg matches and parses float arguments
 type StringArg struct{}
 
-func (s *StringArg) Matches(part string) bool                           { return true }
-func (s *StringArg) Parse(part string, data *Data) (interface{}, error) { return part, nil }
+func (s *StringArg) Matches(def *ArgDef, part string) bool                           { return true }
+func (s *StringArg) Parse(def *ArgDef, part string, data *Data) (interface{}, error) { return part, nil }
 func (s *StringArg) HelpName() string {
 	return "Text/String"
 }
@@ -179,7 +179,7 @@ type UserArg struct {
 	RequireMention bool
 }
 
-func (u *UserArg) Matches(part string) bool {
+func (u *UserArg) Matches(def *ArgDef, part string) bool {
 	if u.RequireMention {
 		return strings.HasPrefix(part, "<@") && strings.HasSuffix(part, ">")
 	}
@@ -188,7 +188,7 @@ func (u *UserArg) Matches(part string) bool {
 	return true
 }
 
-func (u *UserArg) Parse(part string, data *Data) (interface{}, error) {
+func (u *UserArg) Parse(def *ArgDef, part string, data *Data) (interface{}, error) {
 	if strings.HasPrefix(part, "<@") {
 		// Direct mention
 		id := part[2 : len(part)-1]
@@ -240,7 +240,7 @@ func FindDiscordUser(str string, guild *discordgo.Guild) (*discordgo.User, error
 // The type of the ID is parsed into a int64
 type UserIDArg struct{}
 
-func (u *UserIDArg) Matches(part string) bool {
+func (u *UserIDArg) Matches(def *ArgDef, part string) bool {
 	// Check for mention
 	if strings.HasPrefix(part, "<@") && strings.HasSuffix(part, ">") {
 		return true
@@ -255,7 +255,7 @@ func (u *UserIDArg) Matches(part string) bool {
 	return false
 }
 
-func (u *UserIDArg) Parse(part string, data *Data) (interface{}, error) {
+func (u *UserIDArg) Parse(def *ArgDef, part string, data *Data) (interface{}, error) {
 	if strings.HasPrefix(part, "<@") {
 		// Direct mention
 		id := part[2 : len(part)-1]
