@@ -172,7 +172,7 @@ type StringArg struct{}
 func (s *StringArg) Matches(def *ArgDef, part string) bool                           { return true }
 func (s *StringArg) Parse(def *ArgDef, part string, data *Data) (interface{}, error) { return part, nil }
 func (s *StringArg) HelpName() string {
-	return "Text/String"
+	return "Text"
 }
 
 // UserArg matches and parses user argument, optionally searching for the member if RequireMention is false
