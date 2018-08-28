@@ -48,28 +48,29 @@ type OutOfRangeError struct {
 	Min, Max interface{}
 	Got      interface{}
 	Float    bool
+	ArgName  string
 }
 
 func (o *OutOfRangeError) Error() string {
-	preStr := "Too big"
+	preStr := "too big"
 
 	switch o.Got.(type) {
 	case int64:
 		if o.Got.(int64) < o.Min.(int64) {
-			preStr = "Too small"
+			preStr = "too small"
 		}
 	case float64:
 		if o.Got.(float64) < o.Min.(float64) {
-			preStr = "Too small"
+			preStr = "too small"
 		}
 	}
 
-	const floatFormat = "%s (has to be %f - %f)"
-	const intFormat = "%s (has to be %d - %d)"
+	const floatFormat = "%s is %s (has to be within %f - %f)"
+	const intFormat = "%s is %s (has to be within %d - %d)"
 
 	if o.Float {
-		return fmt.Sprintf(floatFormat, preStr, o.Min, o.Max)
+		return fmt.Sprintf(floatFormat, o.ArgName, preStr, o.Min, o.Max)
 	}
 
-	return fmt.Sprintf(intFormat, preStr, o.Min, o.Max)
+	return fmt.Sprintf(intFormat, o.ArgName, preStr, o.Min, o.Max)
 }

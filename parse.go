@@ -98,7 +98,7 @@ func ParseArgDefs(defs []*ArgDef, required int, combos [][]int, data *Data, spli
 			combined = split[i].Str
 		}
 
-		val, err := def.Type.Parse(combined, data)
+		val, err := def.Type.Parse(def, combined, data)
 		if err != nil {
 			return err
 		}
@@ -165,7 +165,7 @@ func ParseSwitches(switches []*ArgDef, data *Data, split []*RawArg) ([]*RawArg, 
 		// so we need to skip the next RawArg
 		i++
 
-		val, err := matchedArg.Type.Parse(split[i].Str, data)
+		val, err := matchedArg.Type.Parse(matchedArg, split[i].Str, data)
 		if err != nil {
 			// TODO: Use custom error type for helpfull errror
 			return nil, err
@@ -298,7 +298,7 @@ OUTER:
 		for i, comboArg := range combo {
 			def := defs[comboArg]
 
-			if !def.Type.Matches(args[i].Str) {
+			if !def.Type.Matches(def, args[i].Str) {
 				continue OUTER
 			}
 		}
