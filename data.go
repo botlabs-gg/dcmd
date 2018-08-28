@@ -3,7 +3,7 @@ package dcmd
 import (
 	"context"
 	"github.com/jonas747/discordgo"
-	"github.com/jonas747/dutil/dstate"
+	"github.com/jonas747/dstate"
 )
 
 type Data struct {

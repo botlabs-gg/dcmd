@@ -2,7 +2,7 @@ package dcmd
 
 import (
 	"github.com/jonas747/discordgo"
-	"github.com/jonas747/dutil/dstate"
+	"github.com/jonas747/dstate"
 	"strconv"
 	"strings"
 )
@@ -260,7 +260,7 @@ func (u *UserIDArg) Matches(def *ArgDef, part string) bool {
 	return false
 }
 
-func (u *UserIDArg) Parse(part string, data *Data) (interface{}, error) {
+func (u *UserIDArg) Parse(def *ArgDef, part string, data *Data) (interface{}, error) {
 	if strings.HasPrefix(part, "<@") {
 		// Direct mention
 		id := part[2 : len(part)-1]
@@ -269,10 +269,10 @@ func (u *UserIDArg) Parse(part string, data *Data) (interface{}, error) {
 			id = id[1:]
 		}
 
+		parsed, _ := strconv.ParseInt(id, 10, 64)
 		for _, v := range data.Msg.Mentions {
-			if id == v.ID {
-				parsedID, err := strconv.ParseInt(v.ID, 10, 64)
-				return parsedID, err
+			if parsed == v.ID {
+				return v.ID, nil
 			}
 		}
 
