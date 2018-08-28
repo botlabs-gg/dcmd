@@ -1,7 +1,6 @@
 package dcmd
 
 import (
-	"fmt"
 	"github.com/pkg/errors"
 	"strings"
 )
