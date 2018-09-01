@@ -205,7 +205,7 @@ func (u *UserArg) Parse(part string, data *Data) (interface{}, error) {
 			}
 		}
 		return nil, &ImproperMention{part}
-	} else if !u.RequireMention {
+	} else if !u.RequireMention && data.GS != nil {
 		// Search for username
 		data.GS.RLock()
 		u, err := FindDiscordUserByName(part, data.GS.Members)
