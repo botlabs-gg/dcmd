@@ -3,7 +3,7 @@ package dcmd
 import (
 	"fmt"
 	"github.com/jonas747/discordgo"
-	"github.com/jonas747/dutil/dstate"
+	"github.com/jonas747/dstate"
 	"github.com/pkg/errors"
 	"log"
 	"runtime/debug"
