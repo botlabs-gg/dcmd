@@ -35,9 +35,7 @@ func TestFloatArg(t *testing.T) {
 func TestUserIDArg(t *testing.T) {
 	d := &Data{
 		Msg: &discordgo.Message{
-			Mentions: []*discordgo.User{
-				&discordgo.User{ID: "105487308693757952"},
-			},
+			Mentions: []*discordgo.User{},
 		},
 	}
 

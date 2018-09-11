@@ -264,14 +264,12 @@ func (u *UserIDArg) Parse(def *ArgDef, part string, data *Data) (interface{}, er
 			id = id[1:]
 		}
 
-		for _, v := range data.Msg.Mentions {
-			if id == v.ID {
-				parsedID, err := strconv.ParseInt(v.ID, 10, 64)
-				return parsedID, err
-			}
+		parsedID, err := strconv.ParseInt(id, 10, 64)
+		if err != nil {
+			return nil, &ImproperMention{part}
 		}
 
-		return nil, &ImproperMention{part}
+		return parsedID, nil
 	}
 
 	id, err := strconv.ParseInt(part, 10, 64)
