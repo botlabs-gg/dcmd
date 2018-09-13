@@ -23,9 +23,15 @@ type ParsedArg struct {
 }
 
 func (p *ParsedArg) Str() string {
+	if p.Value == nil {
+		return ""
+	}
+
 	switch t := p.Value.(type) {
 	case string:
 		return t
+	case int, int32, int64, uint, uint32, uint64:
+		return strconv.FormatInt(p.Int64(), 10)
 	default:
 		return ""
 	}
@@ -33,6 +39,10 @@ func (p *ParsedArg) Str() string {
 
 // TODO: GO-Generate the number ones
 func (p *ParsedArg) Int() int {
+	if p.Value == nil {
+		return 0
+	}
+
 	switch t := p.Value.(type) {
 	case int:
 		return t
@@ -52,6 +62,10 @@ func (p *ParsedArg) Int() int {
 }
 
 func (p *ParsedArg) Int64() int64 {
+	if p.Value == nil {
+		return 0
+	}
+
 	switch t := p.Value.(type) {
 	case int:
 		return int64(t)
@@ -68,6 +82,23 @@ func (p *ParsedArg) Int64() int64 {
 	default:
 		return 0
 	}
+}
+
+func (p *ParsedArg) Bool() bool {
+	if p.Value == nil {
+		return false
+	}
+
+	switch t := p.Value.(type) {
+	case bool:
+		return t
+	case int, int32, int64, uint, uint32, uint64:
+		return p.Int64() > 0
+	case string:
+		return t != ""
+	}
+
+	return false
 }
 
 // NewParsedArgs creates a new ParsedArg slice from defs passed, also filling default values
