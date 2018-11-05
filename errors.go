@@ -44,6 +44,14 @@ func (i *UserNotFound) Error() string {
 	return fmt.Sprintf("User %q not found", i.Part)
 }
 
+type ChannelNotFound struct {
+	ID int64
+}
+
+func (c *ChannelNotFound) Error() string {
+	return fmt.Sprintf("Channel %d not found", c.ID)
+}
+
 type OutOfRangeError struct {
 	Min, Max interface{}
 	Got      interface{}

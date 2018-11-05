@@ -135,6 +135,7 @@ var (
 	User           = &UserArg{}
 	UserReqMention = &UserArg{RequireMention: true}
 	UserID         = &UserIDArg{}
+	Channel        = &ChannelArg{}
 )
 
 // IntArg matches and parses integer arguments
@@ -318,4 +319,61 @@ func (u *UserIDArg) Parse(def *ArgDef, part string, data *Data) (interface{}, er
 
 func (u *UserIDArg) HelpName() string {
 	return "Mention/ID"
+}
+
+// UserIDArg matches a mention or a plain id, the user does not have to be a part of the server
+// The type of the ID is parsed into a int64
+type ChannelArg struct{}
+
+func (ca *ChannelArg) Matches(def *ArgDef, part string) bool {
+	// Check for mention
+	if strings.HasPrefix(part, "<#") && strings.HasSuffix(part, ">") {
+		return true
+	}
+
+	// Check for ID
+	_, err := strconv.ParseInt(part, 10, 64)
+	if err == nil {
+		return true
+	}
+
+	return false
+}
+
+func (ca *ChannelArg) Parse(def *ArgDef, part string, data *Data) (interface{}, error) {
+	if data.GS == nil {
+		return nil, nil
+	}
+
+	var cID int64
+	if strings.HasPrefix(part, "<#") {
+		// Direct mention
+		id := part[2 : len(part)-1]
+
+		parsed, err := strconv.ParseInt(id, 10, 64)
+		if err != nil {
+			return nil, &ImproperMention{part}
+		}
+
+		cID = parsed
+	} else {
+		id, err := strconv.ParseInt(part, 10, 64)
+		if err != nil {
+			return nil, &ImproperMention{part}
+		}
+		cID = id
+	}
+
+	data.GS.RLock()
+	if c, ok := data.GS.Channels[cID]; ok {
+		data.GS.RUnlock()
+		return c, nil
+	}
+	data.GS.RUnlock()
+
+	return nil, &ImproperMention{part}
+}
+
+func (ca *ChannelArg) HelpName() string {
+	return "Channel"
 }
