@@ -222,7 +222,7 @@ func (u *UserArg) Matches(def *ArgDef, part string) bool {
 }
 
 func (u *UserArg) Parse(def *ArgDef, part string, data *Data) (interface{}, error) {
-	if strings.HasPrefix(part, "<@") {
+	if strings.HasPrefix(part, "<@") && len(part) > 3 {
 		// Direct mention
 		id := part[2 : len(part)-1]
 		if id[0] == '!' {
@@ -293,7 +293,7 @@ func (u *UserIDArg) Matches(def *ArgDef, part string) bool {
 }
 
 func (u *UserIDArg) Parse(def *ArgDef, part string, data *Data) (interface{}, error) {
-	if strings.HasPrefix(part, "<@") {
+	if strings.HasPrefix(part, "<@") && len(part) > 3 {
 		// Direct mention
 		id := part[2 : len(part)-1]
 		if id[0] == '!' {
@@ -346,7 +346,7 @@ func (ca *ChannelArg) Parse(def *ArgDef, part string, data *Data) (interface{}, 
 	}
 
 	var cID int64
-	if strings.HasPrefix(part, "<#") {
+	if strings.HasPrefix(part, "<#") && len(part) > 3 {
 		// Direct mention
 		id := part[2 : len(part)-1]
 
