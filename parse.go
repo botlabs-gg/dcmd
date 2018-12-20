@@ -1,13 +1,12 @@
 package dcmd
 
 import (
-	"github.com/pkg/errors"
 	"strings"
 )
 
 var (
-	ErrNoComboFound       = errors.New("No matching combo found")
-	ErrNotEnoughArguments = errors.New("Not enough arguments passed")
+	ErrNoComboFound       = NewSimpleUserError("No matching combo found")
+	ErrNotEnoughArguments = NewSimpleUserError("Not enough arguments passed")
 )
 
 func ArgParserMW(inner RunFunc) RunFunc {
@@ -15,6 +14,10 @@ func ArgParserMW(inner RunFunc) RunFunc {
 		// Parse Args
 		err := ParseCmdArgs(data)
 		if err != nil {
+			if IsUserError(err) {
+				return "Invalid arguments provided: " + err.Error(), nil
+			}
+
 			return nil, err
 		}
 
