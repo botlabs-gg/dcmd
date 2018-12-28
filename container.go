@@ -159,6 +159,11 @@ func (c *Container) FindCommand(searchStr string) (cmd *RegisteredCommand, rest 
 }
 
 func (c *Container) AbsFindCommand(searchStr string) (cmd *RegisteredCommand, container *Container) {
+	cmd, container, _ = c.AbsFindCommandWithRest(searchStr)
+	return
+}
+
+func (c *Container) AbsFindCommandWithRest(searchStr string) (cmd *RegisteredCommand, container *Container, rest string) {
 	container = c
 	if searchStr == "" {
 		return
@@ -166,12 +171,13 @@ func (c *Container) AbsFindCommand(searchStr string) (cmd *RegisteredCommand, co
 
 	for {
 		cmd, searchStr = c.FindCommand(searchStr)
+		rest = searchStr
 		if cmd == nil {
 			return
 		}
 
 		if cast, ok := cmd.Command.(*Container); ok {
-			return cast.AbsFindCommand(searchStr)
+			return cast.AbsFindCommandWithRest(searchStr)
 		}
 
 		return
