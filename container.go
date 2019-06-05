@@ -183,7 +183,6 @@ func (c *Container) AbsFindCommandWithRest(searchStr string) (cmd *RegisteredCom
 		return
 	}
 
-	return
 }
 
 // Sub returns a copy of the container but with the following attributes overwritten

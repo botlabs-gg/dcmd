@@ -3,6 +3,7 @@ package dcmd
 import (
 	"github.com/jonas747/discordgo"
 	"github.com/jonas747/dstate"
+	"github.com/jonas747/dutil"
 	"strconv"
 	"strings"
 )
@@ -101,6 +102,49 @@ func (p *ParsedArg) Bool() bool {
 	return false
 }
 
+func (p *ParsedArg) MemberState() *dstate.MemberState {
+	if p.Value == nil {
+		return nil
+	}
+
+	switch t := p.Value.(type) {
+	case *dstate.MemberState:
+		return t
+	case *AdvUserMatch:
+		return t.Member
+	}
+
+	return nil
+}
+
+func (p *ParsedArg) User() *discordgo.User {
+	if p.Value == nil {
+		return nil
+	}
+
+	switch t := p.Value.(type) {
+	case *dstate.MemberState:
+		return t.DGoUser()
+	case *AdvUserMatch:
+		return t.User
+	}
+
+	return nil
+}
+
+func (p *ParsedArg) AdvUser() *AdvUserMatch {
+	if p.Value == nil {
+		return nil
+	}
+
+	switch t := p.Value.(type) {
+	case *AdvUserMatch:
+		return t
+	}
+
+	return nil
+}
+
 // NewParsedArgs creates a new ParsedArg slice from defs passed, also filling default values
 func NewParsedArgs(defs []*ArgDef) []*ParsedArg {
 	out := make([]*ParsedArg, len(defs))
@@ -129,13 +173,15 @@ type ArgType interface {
 
 var (
 	// Create some convenience instances
-	Int            = &IntArg{}
-	Float          = &FloatArg{}
-	String         = &StringArg{}
-	User           = &UserArg{}
-	UserReqMention = &UserArg{RequireMention: true}
-	UserID         = &UserIDArg{}
-	Channel        = &ChannelArg{}
+	Int             = &IntArg{}
+	Float           = &FloatArg{}
+	String          = &StringArg{}
+	User            = &UserArg{}
+	UserReqMention  = &UserArg{RequireMention: true}
+	UserID          = &UserIDArg{}
+	Channel         = &ChannelArg{}
+	AdvUser         = &AdvUserArg{EnableUserID: true, EnableUsernameSearch: true, RequireMembership: true}
+	AdvUserNoMember = &AdvUserArg{EnableUserID: true, EnableUsernameSearch: true}
 )
 
 // IntArg matches and parses integer arguments
@@ -239,10 +285,11 @@ func (u *UserArg) Parse(def *ArgDef, part string, data *Data) (interface{}, erro
 		return nil, &ImproperMention{part}
 	} else if !u.RequireMention && data.GS != nil {
 		// Search for username
-		data.GS.RLock()
-		u, err := FindDiscordUserByName(part, data.GS.Members)
-		data.GS.RUnlock()
-		return u, err
+		m, err := FindDiscordMemberByName(data.GS, part)
+		if m != nil {
+			return m.DGoUser(), nil
+		}
+		return nil, err
 	}
 
 	return nil, &ImproperMention{part}
@@ -255,8 +302,16 @@ func (u *UserArg) HelpName() string {
 	return "User"
 }
 
-func FindDiscordUserByName(str string, members map[int64]*dstate.MemberState) (*discordgo.User, error) {
-	for _, v := range members {
+func FindDiscordMemberByName(gs *dstate.GuildState, str string) (*dstate.MemberState, error) {
+	gs.RLock()
+	defer gs.RUnlock()
+
+	lowerIn := strings.ToLower(str)
+
+	partialMatches := make([]*dstate.MemberState, 0, 5)
+	fullMatches := make([]*dstate.MemberState, 0, 5)
+
+	for _, v := range gs.Members {
 		if v == nil {
 			continue
 		}
@@ -265,12 +320,44 @@ func FindDiscordUserByName(str string, members map[int64]*dstate.MemberState) (*
 			continue
 		}
 
-		if strings.EqualFold(str, v.Username) {
-			return v.DGoUser(), nil
+		if strings.EqualFold(str, v.Username) || strings.EqualFold(str, v.Nick) {
+			fullMatches = append(fullMatches, v.Copy())
+			if len(fullMatches) >= 5 {
+				break
+			}
+		} else if len(partialMatches) < 5 {
+			if strings.Contains(v.Username, lowerIn) {
+				partialMatches = append(partialMatches, v)
+			}
 		}
 	}
 
-	return nil, &UserNotFound{str}
+	if len(fullMatches) == 1 {
+		return fullMatches[0].Copy(), nil
+	}
+
+	if len(fullMatches) == 0 && len(partialMatches) == 0 {
+		return nil, &UserNotFound{dutil.EscapeEveryoneMention(str)}
+	}
+
+	out := ""
+	for _, v := range fullMatches {
+		if out != "" {
+			out += ", "
+		}
+
+		out += "`" + v.Username + "`"
+	}
+
+	for _, v := range partialMatches {
+		if out != "" {
+			out += ", "
+		}
+
+		out += "`" + v.Username + "`"
+	}
+
+	return nil, NewSimpleUserError("Too many users with that name, did you mean one of these? " + out + ". Please re-run the command with a narrower search.")
 }
 
 // UserIDArg matches a mention or a plain id, the user does not have to be a part of the server
@@ -376,4 +463,144 @@ func (ca *ChannelArg) Parse(def *ArgDef, part string, data *Data) (interface{}, 
 
 func (ca *ChannelArg) HelpName() string {
 	return "Channel"
+}
+
+type AdvUserMatch struct {
+	// Member may not be present if "RequireMembership" is false
+	Member *dstate.MemberState
+
+	// User is always present
+	User *discordgo.User
+}
+
+func (a *AdvUserMatch) UsernameOrNickname() string {
+	if a.Member != nil {
+		if a.Member.Nick != "" {
+			return a.Member.Nick
+		}
+	}
+
+	return a.User.Username
+}
+
+// AdvUserArg is a more advanced version of UserArg and UserIDArg, it will return a AdvUserMatch
+type AdvUserArg struct {
+	EnableUserID         bool // Whether to check for user IDS
+	EnableUsernameSearch bool // Whether to search for usernames
+	RequireMembership    bool // Whether this requires a membership of the server, if set then Member will always be populated
+}
+
+func (u *AdvUserArg) Matches(def *ArgDef, part string) bool {
+	if strings.HasPrefix(part, "<@") && strings.HasSuffix(part, ">") {
+		return true
+	}
+
+	if u.EnableUserID {
+		_, err := strconv.ParseInt(part, 10, 64)
+		if err == nil {
+			return true
+		}
+	}
+
+	if u.EnableUsernameSearch {
+		// username search
+		return true
+	}
+
+	return false
+}
+
+func (u *AdvUserArg) Parse(def *ArgDef, part string, data *Data) (interface{}, error) {
+
+	var user *discordgo.User
+	var ms *dstate.MemberState
+
+	// check mention
+	if strings.HasPrefix(part, "<@") && len(part) > 3 {
+		user = u.ParseMention(def, part, data)
+	}
+
+	msFailed := false
+	if user == nil && u.EnableUserID {
+		// didn't find a match in the previous step
+		// try userID search
+		if parsed, err := strconv.ParseInt(part, 10, 64); err == nil {
+			ms, user = u.SearchID(parsed, data)
+			if ms == nil {
+				msFailed = true
+			}
+		}
+	}
+
+	if u.EnableUsernameSearch && data.GS != nil {
+		// Search for username
+		ms, _ = FindDiscordMemberByName(data.GS, part)
+	}
+
+	if ms == nil && user == nil {
+		return nil, NewSimpleUserError("User/Member not found")
+	}
+
+	if ms != nil && user == nil {
+		user = ms.DGoUser()
+	} else if ms == nil && user != nil && !msFailed {
+		ms, user = u.SearchID(user.ID, data)
+	}
+
+	return nil, &ImproperMention{part}
+}
+
+func (u *AdvUserArg) SearchID(parsed int64, data *Data) (member *dstate.MemberState, user *discordgo.User) {
+
+	if data.GS != nil {
+		// attempt to fetch member
+		member = data.GS.MemberCopy(true, parsed)
+		if member != nil {
+			return
+		}
+
+		m, err := data.Session.GuildMember(data.GS.ID, parsed)
+		if err == nil {
+			member = dstate.MSFromDGoMember(data.GS, m)
+			return member, nil
+		}
+	}
+
+	if u.RequireMembership {
+		return nil, nil
+	}
+
+	// fallback to standard user
+	user, _ = data.Session.User(parsed)
+	return
+}
+
+func (u *AdvUserArg) ParseMention(def *ArgDef, part string, data *Data) (user *discordgo.User) {
+	// Direct mention
+	id := part[2 : len(part)-1]
+	if id[0] == '!' {
+		// Nickname mention
+		id = id[1:]
+	}
+
+	parsed, _ := strconv.ParseInt(id, 10, 64)
+	for _, v := range data.Msg.Mentions {
+		if parsed == v.ID {
+			return v
+		}
+	}
+
+	return nil
+}
+
+func (u *AdvUserArg) HelpName() string {
+	out := "User mention"
+	if u.EnableUsernameSearch {
+		out += "/Name"
+	}
+	if u.EnableUserID {
+		out += "/ID"
+	}
+
+	return out
 }
