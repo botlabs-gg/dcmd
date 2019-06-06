@@ -326,7 +326,7 @@ func FindDiscordMemberByName(gs *dstate.GuildState, str string) (*dstate.MemberS
 				break
 			}
 		} else if len(partialMatches) < 5 {
-			if strings.Contains(v.Username, lowerIn) {
+			if strings.Contains(strings.ToLower(v.Username), lowerIn) {
 				partialMatches = append(partialMatches, v)
 			}
 		}
@@ -357,7 +357,11 @@ func FindDiscordMemberByName(gs *dstate.GuildState, str string) (*dstate.MemberS
 		out += "`" + v.Username + "`"
 	}
 
-	return nil, NewSimpleUserError("Too many users with that name, did you mean one of these? " + out + ". Please re-run the command with a narrower search.")
+	if len(fullMatches) > 1 {
+		return nil, NewSimpleUserError("Too many users with that name, " + out + ". Please re-run the command with a narrower search, mention or ID.")
+	}
+
+	return nil, NewSimpleUserError("Did you mean one of these? " + out + ". Please re-run the command with a narrower search, mention or ID")
 }
 
 // UserIDArg matches a mention or a plain id, the user does not have to be a part of the server
@@ -532,9 +536,13 @@ func (u *AdvUserArg) Parse(def *ArgDef, part string, data *Data) (interface{}, e
 		}
 	}
 
-	if u.EnableUsernameSearch && data.GS != nil {
+	if u.EnableUsernameSearch && data.GS != nil && ms == nil && user == nil {
 		// Search for username
-		ms, _ = FindDiscordMemberByName(data.GS, part)
+		var err error
+		ms, err = FindDiscordMemberByName(data.GS, part)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	if ms == nil && user == nil {
@@ -547,7 +555,10 @@ func (u *AdvUserArg) Parse(def *ArgDef, part string, data *Data) (interface{}, e
 		ms, user = u.SearchID(user.ID, data)
 	}
 
-	return nil, &ImproperMention{part}
+	return &AdvUserMatch{
+		Member: ms,
+		User:   user,
+	}, nil
 }
 
 func (u *AdvUserArg) SearchID(parsed int64, data *Data) (member *dstate.MemberState, user *discordgo.User) {
@@ -556,13 +567,13 @@ func (u *AdvUserArg) SearchID(parsed int64, data *Data) (member *dstate.MemberSt
 		// attempt to fetch member
 		member = data.GS.MemberCopy(true, parsed)
 		if member != nil {
-			return
+			return member, member.DGoUser()
 		}
 
 		m, err := data.Session.GuildMember(data.GS.ID, parsed)
 		if err == nil {
 			member = dstate.MSFromDGoMember(data.GS, m)
-			return member, nil
+			return member, m.User
 		}
 	}
 
