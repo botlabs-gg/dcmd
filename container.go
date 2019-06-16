@@ -113,7 +113,7 @@ func (c *Container) Run(data *Data) (interface{}, error) {
 		}
 
 		for i := range data.ContainerChain {
-			last = data.ContainerChain[len(data.ContainerChain)-1-i].buildMiddlewareChain(last, matchingCmd)
+			last = data.ContainerChain[len(data.ContainerChain)-1-i].BuildMiddlewareChain(last, matchingCmd)
 		}
 	}
 
@@ -217,7 +217,7 @@ func (c *Container) AddMidlewares(mw ...MiddleWareFunc) {
 	c.middlewares = append(c.middlewares, mw...)
 }
 
-func (c *Container) buildMiddlewareChain(r RunFunc, cmd *RegisteredCommand) RunFunc {
+func (c *Container) BuildMiddlewareChain(r RunFunc, cmd *RegisteredCommand) RunFunc {
 	for i := range c.middlewares {
 		r = c.middlewares[len(c.middlewares)-1-i](r)
 	}
@@ -271,7 +271,7 @@ func (c *Container) BuildMiddlewareChains(containerChain []*Container) {
 		}
 
 		for i := range containerChain {
-			last = containerChain[len(containerChain)-1-i].buildMiddlewareChain(last, cmd)
+			last = containerChain[len(containerChain)-1-i].BuildMiddlewareChain(last, cmd)
 		}
 		cmd.builtFullMiddlewareChain = last
 	}
