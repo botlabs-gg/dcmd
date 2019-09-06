@@ -4,6 +4,8 @@ dcmd is a extensible discord command system based on interfaces.
 
 It's very much work in progress at the moment, if you start using it now you have to be okay with things changing and the fact that you will find bugs.
 
+**Note** Only works with my fork of discordgo, if you want to use this with bwmarrin/discordgo with go modules use v1.0.0 which is the last version of this that supported that lib: `go get -u github.com/jonas747/dcmd@v1.0.0`
+
 ## Features:
 
 For now look in the example folder. Still planning things out.
