@@ -1,11 +1,12 @@
 package dcmd
 
 import (
+	"strconv"
+	"strings"
+
 	"github.com/jonas747/discordgo"
 	"github.com/jonas747/dstate"
 	"github.com/jonas747/dutil"
-	"strconv"
-	"strings"
 )
 
 // ArgDef represents a argument definition, either a switch or plain arg
@@ -337,7 +338,7 @@ func FindDiscordMemberByName(gs *dstate.GuildState, str string) (*dstate.MemberS
 	}
 
 	if len(fullMatches) == 0 && len(partialMatches) == 0 {
-		return nil, &UserNotFound{dutil.EscapeEveryoneMention(str)}
+		return nil, &UserNotFound{dutil.EscapeSpecialMentions(str)}
 	}
 
 	out := ""

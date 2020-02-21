@@ -3,10 +3,11 @@ package dcmd
 import (
 	"errors"
 	"fmt"
-	"github.com/jonas747/discordgo"
-	"github.com/jonas747/dutil"
 	"reflect"
 	"time"
+
+	"github.com/jonas747/discordgo"
+	"github.com/jonas747/dutil"
 )
 
 type Response interface {
@@ -22,7 +23,7 @@ func SendResponseInterface(data *Data, reply interface{}, escapeEveryoneMention 
 	case string:
 		if t != "" {
 			if escapeEveryoneMention {
-				t = dutil.EscapeEveryoneMention(t)
+				t = dutil.EscapeSpecialMentions(t)
 			}
 			return dutil.SplitSendMessage(data.Session, data.Msg.ChannelID, t)
 		}
@@ -31,7 +32,7 @@ func SendResponseInterface(data *Data, reply interface{}, escapeEveryoneMention 
 		if t != nil {
 			m := t.Error()
 			if escapeEveryoneMention {
-				m = dutil.EscapeEveryoneMention(m)
+				m = dutil.EscapeSpecialMentions(m)
 			}
 			return dutil.SplitSendMessage(data.Session, data.Msg.ChannelID, m)
 		}
