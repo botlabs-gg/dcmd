@@ -1,9 +1,10 @@
 package dcmd
 
 import (
-	"github.com/bwmarrin/discordgo"
-	"github.com/stretchr/testify/assert"
 	"testing"
+
+	"github.com/jonas747/discordgo"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestIntArg(t *testing.T) {
@@ -56,39 +57,6 @@ func TestUserIDArg(t *testing.T) {
 			assert.Equal(t, c.match, matches, "Incorrect match")
 			if matches {
 				parsed, err := arg.Parse(nil, c.part, d)
-				assert.NoError(t, err, "Should parse sucessfully")
-				assert.Equal(t, c.result, parsed)
-			}
-		})
-	}
-}
-
-func TestUserIDArg(t *testing.T) {
-	d := &Data{
-		Msg: &discordgo.Message{
-			Mentions: []*discordgo.User{
-				&discordgo.User{ID: "105487308693757952"},
-			},
-		},
-	}
-
-	cases := []struct {
-		part   string
-		match  bool
-		result int64
-	}{
-		{"123", true, 123},
-		{"hello", false, 321},
-		{"<@105487308693757952>", true, 105487308693757952},
-	}
-
-	for _, c := range cases {
-		t.Run("case_"+c.part, func(t *testing.T) {
-			arg := &UserIDArg{}
-			matches := arg.Matches(c.part)
-			assert.Equal(t, c.match, matches, "Incorrect match")
-			if matches {
-				parsed, err := arg.Parse(c.part, d)
 				assert.NoError(t, err, "Should parse sucessfully")
 				assert.Equal(t, c.result, parsed)
 			}

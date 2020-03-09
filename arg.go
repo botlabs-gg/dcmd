@@ -6,7 +6,6 @@ import (
 
 	"github.com/jonas747/discordgo"
 	"github.com/jonas747/dstate"
-	"github.com/jonas747/dutil"
 )
 
 // ArgDef represents a argument definition, either a switch or plain arg
@@ -248,8 +247,10 @@ func (f *FloatArg) HelpName() string {
 // StringArg matches and parses float arguments
 type StringArg struct{}
 
-func (s *StringArg) Matches(def *ArgDef, part string) bool                           { return true }
-func (s *StringArg) Parse(def *ArgDef, part string, data *Data) (interface{}, error) { return part, nil }
+func (s *StringArg) Matches(def *ArgDef, part string) bool { return true }
+func (s *StringArg) Parse(def *ArgDef, part string, data *Data) (interface{}, error) {
+	return part, nil
+}
 func (s *StringArg) HelpName() string {
 	return "Text"
 }
@@ -338,7 +339,7 @@ func FindDiscordMemberByName(gs *dstate.GuildState, str string) (*dstate.MemberS
 	}
 
 	if len(fullMatches) == 0 && len(partialMatches) == 0 {
-		return nil, &UserNotFound{dutil.EscapeSpecialMentions(str)}
+		return nil, &UserNotFound{str}
 	}
 
 	out := ""
