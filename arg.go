@@ -304,7 +304,13 @@ func (u *UserArg) HelpName() string {
 	return "User"
 }
 
+var CustomUsernameSearchFunc func(gs *dstate.GuildState, query string) (*dstate.MemberState, error)
+
 func FindDiscordMemberByName(gs *dstate.GuildState, str string) (*dstate.MemberState, error) {
+	if CustomUsernameSearchFunc != nil {
+		return CustomUsernameSearchFunc(gs, str)
+	}
+
 	gs.RLock()
 	defer gs.RUnlock()
 
