@@ -2,10 +2,12 @@ package dcmd
 
 import (
 	"context"
+
 	"github.com/jonas747/discordgo"
 	"github.com/jonas747/dstate"
 )
 
+// Data is  a struct of data available to commands
 type Data struct {
 	Cmd      *RegisteredCommand
 	Args     []*ParsedArg
@@ -14,6 +16,7 @@ type Data struct {
 	Msg     *discordgo.Message
 	CS      *dstate.ChannelState
 	GS      *dstate.GuildState
+	MS      *dstate.MemberState
 	Session *discordgo.Session
 	Source  TriggerSource
 

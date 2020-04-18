@@ -2,12 +2,13 @@ package dcmd
 
 import (
 	"fmt"
-	"github.com/jonas747/discordgo"
-	"github.com/jonas747/dstate"
-	"github.com/pkg/errors"
 	"log"
 	"runtime/debug"
 	"strings"
+
+	"github.com/jonas747/discordgo"
+	"github.com/jonas747/dstate"
+	"github.com/pkg/errors"
 )
 
 type System struct {
@@ -50,6 +51,7 @@ func (sys *System) HandleMessageCreate(s *discordgo.Session, m *discordgo.Messag
 // CheckMessage checks the message for commands, and triggers any command that the message should trigger
 // you should not add this as an discord handler directly, if you want to do that you should add "system.HandleMessageCreate" instead.
 func (sys *System) CheckMessage(s *discordgo.Session, m *discordgo.MessageCreate) error {
+
 	data, err := sys.FillData(s, m.Message)
 	if err != nil {
 		return err
@@ -130,7 +132,8 @@ func (sys *System) FindMentionPrefix(data *Data) (found bool) {
 }
 
 var (
-	ErrChannelNotFound = errors.New("Channel not found")
+	ErrChannelNotFound    = errors.New("Channel not found")
+	ErrMemberNotAvailable = errors.New("Member not provided in message")
 )
 
 func (sys *System) FillData(s *discordgo.Session, m *discordgo.Message) (*Data, error) {
@@ -150,6 +153,14 @@ func (sys *System) FillData(s *discordgo.Session, m *discordgo.Message) (*Data, 
 		data.Source = DMSource
 	} else {
 		data.GS = cs.Guild
+		if m.Member == nil || m.Author == nil {
+			return nil, ErrMemberNotAvailable
+		}
+
+		member := *m.Member
+		member.User = m.Author // user field is not provided in Message.Member, its weird but *shrug*
+
+		data.MS = dstate.MSFromDGoMember(data.GS, &member)
 	}
 
 	return data, nil
