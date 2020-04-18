@@ -2,9 +2,10 @@ package dcmd
 
 import (
 	"fmt"
+	"testing"
+
 	"github.com/jonas747/discordgo"
 	"github.com/stretchr/testify/assert"
-	"testing"
 )
 
 const (
@@ -80,6 +81,10 @@ func TestFindPrefix(t *testing.T) {
 					Content:  v.msgContent,
 					Mentions: v.mentions,
 				},
+			}
+
+			if v.expectedSource != DMSource {
+				testData.Msg.GuildID = 1
 			}
 
 			found := testSystem.FindPrefix(testData)
