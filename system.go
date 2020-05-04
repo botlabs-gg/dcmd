@@ -66,6 +66,23 @@ func (sys *System) CheckMessage(s *discordgo.Session, m *discordgo.MessageCreate
 	return sys.ResponseSender.SendResponse(data, response, err)
 }
 
+// CheckMessageWtihPrefetchedPrefix is the same as CheckMessage but you pass in a prefetched command prefix
+func (sys *System) CheckMessageWtihPrefetchedPrefix(s *discordgo.Session, m *discordgo.MessageCreate, prefetchedPrefix string) error {
+
+	data, err := sys.FillData(s, m.Message)
+	if err != nil {
+		return err
+	}
+
+	if !sys.FindPrefixWithPrefetched(data, prefetchedPrefix) {
+		// No prefix found in the message for a command to be triggered
+		return nil
+	}
+
+	response, err := sys.Root.Run(data)
+	return sys.ResponseSender.SendResponse(data, response, err)
+}
+
 // FindPrefix checks if the message has a proper command prefix (either from the PrefixProvider or a direction mention to the bot)
 // It sets the source field, and MsgStripped in data if found
 func (sys *System) FindPrefix(data *Data) (found bool) {
@@ -94,6 +111,29 @@ func (sys *System) FindPrefix(data *Data) (found bool) {
 	if strings.HasPrefix(data.Msg.Content, prefix) {
 		data.Source = PrefixSource
 		data.MsgStrippedPrefix = strings.TrimSpace(strings.Replace(data.Msg.Content, prefix, "", 1))
+		found = true
+	}
+
+	return
+}
+
+// FindPrefixWithPrefetched is the same as FindPrefix but you pass in a prefetched command prefix
+func (sys *System) FindPrefixWithPrefetched(data *Data, commandPrefix string) (found bool) {
+	if data.Msg.GuildID == 0 {
+		data.MsgStrippedPrefix = data.Msg.Content
+		data.Source = DMSource
+		return true
+	}
+
+	if sys.FindMentionPrefix(data) {
+		return true
+	}
+
+	data.PrefixUsed = commandPrefix
+
+	if strings.HasPrefix(data.Msg.Content, commandPrefix) {
+		data.Source = PrefixSource
+		data.MsgStrippedPrefix = strings.TrimSpace(strings.Replace(data.Msg.Content, commandPrefix, "", 1))
 		found = true
 	}
 
