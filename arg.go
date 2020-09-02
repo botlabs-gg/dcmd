@@ -5,7 +5,7 @@ import (
 	"strings"
 
 	"github.com/jonas747/discordgo"
-	"github.com/jonas747/dstate"
+	"github.com/jonas747/dstate/v2"
 )
 
 // ArgDef represents a argument definition, either a switch or plain arg
