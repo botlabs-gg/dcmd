@@ -1,6 +1,7 @@
 package dcmd
 
 import (
+	"bytes"
 	"strconv"
 	"strings"
 
@@ -15,6 +16,48 @@ type ArgDef struct {
 	Type    ArgType
 	Help    string
 	Default interface{}
+}
+
+func (def *ArgDef) StandardSlashCommandOption(typ discordgo.ApplicationCommandOptionType) *discordgo.ApplicationCommandOption {
+	desc := cutStringShort(def.Help, 100)
+	if desc == "" {
+		desc = def.Name
+	}
+
+	return &discordgo.ApplicationCommandOption{
+		Name:        def.Name,
+		Description: desc,
+		Kind:        typ,
+	}
+}
+
+// CutStringShort stops a strinng at "l"-3 if it's longer than "l" and adds "..."
+func cutStringShort(s string, l int) string {
+	var mainBuf bytes.Buffer
+	var latestBuf bytes.Buffer
+
+	i := 0
+	for _, r := range s {
+		latestBuf.WriteRune(r)
+		if i > 3 {
+			lRune, _, _ := latestBuf.ReadRune()
+			mainBuf.WriteRune(lRune)
+		}
+
+		if i >= l {
+			return mainBuf.String() + "..."
+		}
+		i++
+	}
+
+	return mainBuf.String() + latestBuf.String()
+}
+
+func (def *ArgDef) NewParsedDef() *ParsedArg {
+	return &ParsedArg{
+		Def:   def,
+		Value: def.Default,
+	}
 }
 
 type ParsedArg struct {
@@ -150,13 +193,177 @@ func NewParsedArgs(defs []*ArgDef) []*ParsedArg {
 	out := make([]*ParsedArg, len(defs))
 
 	for k, _ := range out {
-		out[k] = &ParsedArg{
-			Def:   defs[k],
-			Value: defs[k].Default,
-		}
+		out[k] = defs[k].NewParsedDef()
 	}
 
 	return out
+}
+
+type SlashCommandsParseOptions struct {
+	Options     map[string]*discordgo.ApplicationCommandInteractionDataOption
+	Interaction *discordgo.Interaction
+}
+
+func (sopts *SlashCommandsParseOptions) ExpectInt64(name string) (int64, error) {
+	if v, found, err := sopts.ExpectInt64Opt(name); err != nil {
+		return 0, err
+	} else if found {
+		return v, nil
+	} else {
+		return 0, NewErrArgExpected(name, "int64", nil)
+	}
+}
+
+func (sopts *SlashCommandsParseOptions) ExpectInt64Opt(name string) (int64, bool, error) {
+	if v, ok := sopts.Options[strings.ToLower(name)]; ok {
+		if cast, ok2 := v.Value.(int64); ok2 {
+			return cast, true, nil
+		} else {
+			return 0, true, NewErrArgExpected(name, "int64", v.Value)
+		}
+	}
+
+	return 0, false, nil
+}
+
+func (sopts *SlashCommandsParseOptions) ExpectString(name string) (string, error) {
+	if v, found, err := sopts.ExpectStringOpt(name); err != nil {
+		return "", err
+	} else if found {
+		return v, nil
+	} else {
+		return "", NewErrArgExpected(name, "string", nil)
+	}
+}
+
+func (sopts *SlashCommandsParseOptions) ExpectStringOpt(name string) (string, bool, error) {
+	if v, ok := sopts.Options[strings.ToLower(name)]; ok {
+		if cast, ok2 := v.Value.(string); ok2 {
+			return cast, true, nil
+		} else {
+			return "", true, NewErrArgExpected(name, "string", v.Value)
+		}
+	}
+
+	return "", false, nil
+}
+
+func (sopts *SlashCommandsParseOptions) ExpectBool(name string) (bool, error) {
+	if v, found, err := sopts.ExpectBoolOpt(name); err != nil {
+		return false, err
+	} else if found {
+		return v, nil
+	} else {
+		return false, NewErrArgExpected(name, "bool", nil)
+	}
+}
+
+func (sopts *SlashCommandsParseOptions) ExpectBoolOpt(name string) (bool, bool, error) {
+	if v, ok := sopts.Options[strings.ToLower(name)]; ok {
+		if cast, ok2 := v.Value.(bool); ok2 {
+			return cast, true, nil
+		} else {
+			return false, true, NewErrArgExpected(name, "string", v.Value)
+		}
+	}
+
+	return false, false, nil
+}
+
+func (sopts *SlashCommandsParseOptions) ExpectUser(name string) (*discordgo.User, error) {
+	if v, found, err := sopts.ExpectUserOpt(name); err != nil {
+		return nil, err
+	} else if found {
+		return v, nil
+	} else {
+		return nil, NewErrArgExpected(name, "*discordgo.User", nil)
+	}
+}
+
+func (sopts *SlashCommandsParseOptions) ExpectUserOpt(name string) (*discordgo.User, bool, error) {
+	id, found, err := sopts.ExpectInt64Opt(name)
+	if err != nil || !found {
+		return nil, found, err
+	}
+
+	user, ok := sopts.Interaction.Data.Resolved.Users[id]
+	if !ok {
+		return nil, true, &ErrResolvedNotFound{Key: name, ID: id, Type: "user"}
+	}
+
+	return user, true, nil
+}
+
+func (sopts *SlashCommandsParseOptions) ExpectMember(name string) (*discordgo.Member, error) {
+	if v, found, err := sopts.ExpectMemberOpt(name); err != nil {
+		return nil, err
+	} else if found {
+		return v, nil
+	} else {
+		return nil, NewErrArgExpected(name, "*discordgo.Member", nil)
+	}
+}
+
+func (sopts *SlashCommandsParseOptions) ExpectMemberOpt(name string) (*discordgo.Member, bool, error) {
+	id, found, err := sopts.ExpectInt64Opt(name)
+	if err != nil || !found {
+		return nil, found, err
+	}
+
+	user, ok := sopts.Interaction.Data.Resolved.Members[id]
+	if !ok {
+		return nil, true, &ErrResolvedNotFound{Key: name, ID: id, Type: "member"}
+	}
+
+	return user, true, nil
+}
+
+func (sopts *SlashCommandsParseOptions) ExpectRole(name string) (*discordgo.Role, error) {
+	if v, found, err := sopts.ExpectRoleOpt(name); err != nil {
+		return nil, err
+	} else if found {
+		return v, nil
+	} else {
+		return nil, NewErrArgExpected(name, "*discordgo.Role", nil)
+	}
+}
+
+func (sopts *SlashCommandsParseOptions) ExpectRoleOpt(name string) (*discordgo.Role, bool, error) {
+	id, found, err := sopts.ExpectInt64Opt(name)
+	if err != nil || !found {
+		return nil, found, err
+	}
+
+	user, ok := sopts.Interaction.Data.Resolved.Roles[id]
+	if !ok {
+		return nil, true, &ErrResolvedNotFound{Key: name, ID: id, Type: "role"}
+	}
+
+	return user, true, nil
+}
+
+func (sopts *SlashCommandsParseOptions) ExpectChannel(name string) (*discordgo.Channel, error) {
+	if v, found, err := sopts.ExpectChannelOpt(name); err != nil {
+		return nil, err
+	} else if found {
+		return v, nil
+	} else {
+		return nil, NewErrArgExpected(name, "*discordgo.Channel", nil)
+	}
+}
+
+func (sopts *SlashCommandsParseOptions) ExpectChannelOpt(name string) (*discordgo.Channel, bool, error) {
+	id, found, err := sopts.ExpectInt64Opt(name)
+	if err != nil || !found {
+		return nil, found, err
+	}
+
+	user, ok := sopts.Interaction.Data.Resolved.Channels[id]
+	if !ok {
+		return nil, true, &ErrResolvedNotFound{Key: name, ID: id, Type: "channel"}
+	}
+
+	return user, true, nil
 }
 
 // ArgType is the interface argument types has to implement,
@@ -165,10 +372,13 @@ type ArgType interface {
 	Matches(def *ArgDef, part string) bool
 
 	// Attempt to parse it, returning any error if one occured.
-	Parse(def *ArgDef, part string, data *Data) (val interface{}, err error)
+	ParseFromMessage(def *ArgDef, part string, data *Data) (val interface{}, err error)
+	ParseFromInteraction(def *ArgDef, data *Data, options *SlashCommandsParseOptions) (val interface{}, err error)
 
 	// Name as shown in help
 	HelpName() string
+
+	SlashCommandOptions(def *ArgDef) []*discordgo.ApplicationCommandOption
 }
 
 var (
@@ -190,14 +400,32 @@ type IntArg struct {
 	Min, Max int64
 }
 
+var _ ArgType = (*IntArg)(nil)
+
 func (i *IntArg) Matches(def *ArgDef, part string) bool {
 	_, err := strconv.ParseInt(part, 10, 64)
 	return err == nil
 }
-func (i *IntArg) Parse(def *ArgDef, part string, data *Data) (interface{}, error) {
+func (i *IntArg) ParseFromMessage(def *ArgDef, part string, data *Data) (interface{}, error) {
 	v, err := strconv.ParseInt(part, 10, 64)
 	if err != nil {
 		return nil, &InvalidInt{part}
+	}
+
+	// A valid range has been specified
+	if i.Max != i.Min {
+		if i.Max < v || i.Min > v {
+			return nil, &OutOfRangeError{ArgName: def.Name, Got: v, Min: i.Min, Max: i.Max}
+		}
+	}
+
+	return v, nil
+}
+
+func (i *IntArg) ParseFromInteraction(def *ArgDef, data *Data, options *SlashCommandsParseOptions) (val interface{}, err error) {
+	v, err := options.ExpectInt64(def.Name)
+	if err != nil {
+		return nil, err
 	}
 
 	// A valid range has been specified
@@ -214,17 +442,23 @@ func (i *IntArg) HelpName() string {
 	return "Whole number"
 }
 
+func (i *IntArg) SlashCommandOptions(def *ArgDef) []*discordgo.ApplicationCommandOption {
+	return []*discordgo.ApplicationCommandOption{def.StandardSlashCommandOption(discordgo.CommandOptionTypeInteger)}
+}
+
 // FloatArg matches and parses float arguments
 // If min and max are not equal then the value has to be within min and max or else it will fail parsing
 type FloatArg struct {
 	Min, Max float64
 }
 
+var _ ArgType = (*FloatArg)(nil)
+
 func (f *FloatArg) Matches(def *ArgDef, part string) bool {
 	_, err := strconv.ParseFloat(part, 64)
 	return err == nil
 }
-func (f *FloatArg) Parse(def *ArgDef, part string, data *Data) (interface{}, error) {
+func (f *FloatArg) ParseFromMessage(def *ArgDef, part string, data *Data) (interface{}, error) {
 	v, err := strconv.ParseFloat(part, 64)
 	if err != nil {
 		return nil, &InvalidFloat{part}
@@ -240,25 +474,64 @@ func (f *FloatArg) Parse(def *ArgDef, part string, data *Data) (interface{}, err
 	return v, nil
 }
 
+func (f *FloatArg) ParseFromInteraction(def *ArgDef, data *Data, options *SlashCommandsParseOptions) (val interface{}, err error) {
+	v, err := options.ExpectString(def.Name)
+	if err != nil {
+		return nil, err
+	}
+
+	parsedF, err := strconv.ParseFloat(v, 64)
+	if err != nil {
+		return nil, err
+	}
+
+	// A valid range has been specified
+	if f.Max != f.Min {
+		if f.Max < parsedF || f.Min > parsedF {
+			return nil, &OutOfRangeError{ArgName: def.Name, Got: parsedF, Min: f.Min, Max: f.Max, Float: true}
+		}
+	}
+
+	return parsedF, nil
+}
+
 func (f *FloatArg) HelpName() string {
 	return "Decimal number"
+}
+
+func (f *FloatArg) SlashCommandOptions(def *ArgDef) []*discordgo.ApplicationCommandOption {
+	return []*discordgo.ApplicationCommandOption{def.StandardSlashCommandOption(discordgo.CommandOptionTypeString)}
 }
 
 // StringArg matches and parses float arguments
 type StringArg struct{}
 
+var _ ArgType = (*StringArg)(nil)
+
 func (s *StringArg) Matches(def *ArgDef, part string) bool { return true }
-func (s *StringArg) Parse(def *ArgDef, part string, data *Data) (interface{}, error) {
+func (s *StringArg) ParseFromMessage(def *ArgDef, part string, data *Data) (interface{}, error) {
 	return part, nil
 }
+
+func (s *StringArg) ParseFromInteraction(def *ArgDef, data *Data, options *SlashCommandsParseOptions) (val interface{}, err error) {
+	v, err := options.ExpectString(def.Name)
+	return v, err
+}
+
 func (s *StringArg) HelpName() string {
 	return "Text"
+}
+
+func (s *StringArg) SlashCommandOptions(def *ArgDef) []*discordgo.ApplicationCommandOption {
+	return []*discordgo.ApplicationCommandOption{def.StandardSlashCommandOption(discordgo.CommandOptionTypeString)}
 }
 
 // UserArg matches and parses user argument, optionally searching for the member if RequireMention is false
 type UserArg struct {
 	RequireMention bool
 }
+
+var _ ArgType = (*UserArg)(nil)
 
 func (u *UserArg) Matches(def *ArgDef, part string) bool {
 	if u.RequireMention {
@@ -269,7 +542,7 @@ func (u *UserArg) Matches(def *ArgDef, part string) bool {
 	return true
 }
 
-func (u *UserArg) Parse(def *ArgDef, part string, data *Data) (interface{}, error) {
+func (u *UserArg) ParseFromMessage(def *ArgDef, part string, data *Data) (interface{}, error) {
 	if strings.HasPrefix(part, "<@") && len(part) > 3 {
 		// Direct mention
 		id := part[2 : len(part)-1]
@@ -279,15 +552,15 @@ func (u *UserArg) Parse(def *ArgDef, part string, data *Data) (interface{}, erro
 		}
 
 		parsed, _ := strconv.ParseInt(id, 10, 64)
-		for _, v := range data.Msg.Mentions {
+		for _, v := range data.TraditionalTriggerData.Message.Mentions {
 			if parsed == v.ID {
 				return v, nil
 			}
 		}
 		return nil, &ImproperMention{part}
-	} else if !u.RequireMention && data.GS != nil {
+	} else if !u.RequireMention && data.GuildData != nil {
 		// Search for username
-		m, err := FindDiscordMemberByName(data.GS, part)
+		m, err := FindDiscordMemberByName(data.GuildData.GS, part)
 		if m != nil {
 			return m.DGoUser(), nil
 		}
@@ -297,11 +570,20 @@ func (u *UserArg) Parse(def *ArgDef, part string, data *Data) (interface{}, erro
 	return nil, &ImproperMention{part}
 }
 
+func (u *UserArg) ParseFromInteraction(def *ArgDef, data *Data, options *SlashCommandsParseOptions) (val interface{}, err error) {
+	user, err := options.ExpectUser(def.Name)
+	return user, err
+}
+
 func (u *UserArg) HelpName() string {
 	if u.RequireMention {
 		return "User Mention"
 	}
 	return "User"
+}
+
+func (u *UserArg) SlashCommandOptions(def *ArgDef) []*discordgo.ApplicationCommandOption {
+	return []*discordgo.ApplicationCommandOption{def.StandardSlashCommandOption(discordgo.CommandOptionTypeUser)}
 }
 
 var CustomUsernameSearchFunc func(gs *dstate.GuildState, query string) (*dstate.MemberState, error)
@@ -376,6 +658,8 @@ func FindDiscordMemberByName(gs *dstate.GuildState, str string) (*dstate.MemberS
 // The type of the ID is parsed into a int64
 type UserIDArg struct{}
 
+var _ ArgType = (*UserIDArg)(nil)
+
 func (u *UserIDArg) Matches(def *ArgDef, part string) bool {
 	// Check for mention
 	if strings.HasPrefix(part, "<@") && strings.HasSuffix(part, ">") {
@@ -391,7 +675,7 @@ func (u *UserIDArg) Matches(def *ArgDef, part string) bool {
 	return false
 }
 
-func (u *UserIDArg) Parse(def *ArgDef, part string, data *Data) (interface{}, error) {
+func (u *UserIDArg) ParseFromMessage(def *ArgDef, part string, data *Data) (interface{}, error) {
 	if strings.HasPrefix(part, "<@") && len(part) > 3 {
 		// Direct mention
 		id := part[2 : len(part)-1]
@@ -416,13 +700,42 @@ func (u *UserIDArg) Parse(def *ArgDef, part string, data *Data) (interface{}, er
 	return nil, &ImproperMention{part}
 }
 
+func (u *UserIDArg) ParseFromInteraction(def *ArgDef, data *Data, options *SlashCommandsParseOptions) (val interface{}, err error) {
+	user, found, err := options.ExpectUserOpt(def.Name)
+	if err != nil {
+		return nil, err
+	}
+	if found {
+		return user.ID, nil
+	}
+
+	id, err := options.ExpectInt64(def.Name + "-ID")
+	if err != nil {
+		return nil, err
+	}
+
+	return id, nil
+}
+
 func (u *UserIDArg) HelpName() string {
 	return "Mention/ID"
+}
+
+func (u *UserIDArg) SlashCommandOptions(def *ArgDef) []*discordgo.ApplicationCommandOption {
+	// Give the user the ability to pick one of these, sadly discord slash commands does not have a basic "one of" type
+	optID := def.StandardSlashCommandOption(discordgo.CommandOptionTypeInteger)
+	optUser := def.StandardSlashCommandOption(discordgo.CommandOptionTypeUser)
+
+	optID.Name = optID.Name + "-ID"
+
+	return []*discordgo.ApplicationCommandOption{optID, optUser}
 }
 
 // UserIDArg matches a mention or a plain id, the user does not have to be a part of the server
 // The type of the ID is parsed into a int64
 type ChannelArg struct{}
+
+var _ ArgType = (*ChannelArg)(nil)
 
 func (ca *ChannelArg) Matches(def *ArgDef, part string) bool {
 	// Check for mention
@@ -439,8 +752,8 @@ func (ca *ChannelArg) Matches(def *ArgDef, part string) bool {
 	return false
 }
 
-func (ca *ChannelArg) Parse(def *ArgDef, part string, data *Data) (interface{}, error) {
-	if data.GS == nil {
+func (ca *ChannelArg) ParseFromMessage(def *ArgDef, part string, data *Data) (interface{}, error) {
+	if data.GuildData == nil {
 		return nil, nil
 	}
 
@@ -463,18 +776,36 @@ func (ca *ChannelArg) Parse(def *ArgDef, part string, data *Data) (interface{}, 
 		cID = id
 	}
 
-	data.GS.RLock()
-	if c, ok := data.GS.Channels[cID]; ok {
-		data.GS.RUnlock()
+	data.GuildData.GS.RLock()
+	if c, ok := data.GuildData.GS.Channels[cID]; ok {
+		data.GuildData.GS.RUnlock()
 		return c, nil
 	}
-	data.GS.RUnlock()
+	data.GuildData.GS.RUnlock()
 
 	return nil, &ImproperMention{part}
 }
 
+func (ca *ChannelArg) ParseFromInteraction(def *ArgDef, data *Data, options *SlashCommandsParseOptions) (val interface{}, err error) {
+	if data.GuildData == nil {
+		return nil, nil
+	}
+
+	channel, err := options.ExpectChannel(def.Name)
+	cs := data.GuildData.GS.Channel(true, channel.ID)
+	if cs == nil {
+		return nil, ErrChannelNotFound
+	}
+
+	return cs, err
+}
+
 func (ca *ChannelArg) HelpName() string {
 	return "Channel"
+}
+
+func (ca *ChannelArg) SlashCommandOptions(def *ArgDef) []*discordgo.ApplicationCommandOption {
+	return []*discordgo.ApplicationCommandOption{def.StandardSlashCommandOption(discordgo.CommandOptionTypeChannel)}
 }
 
 type AdvUserMatch struct {
@@ -502,6 +833,8 @@ type AdvUserArg struct {
 	RequireMembership    bool // Whether this requires a membership of the server, if set then Member will always be populated
 }
 
+var _ ArgType = (*AdvUserArg)(nil)
+
 func (u *AdvUserArg) Matches(def *ArgDef, part string) bool {
 	if strings.HasPrefix(part, "<@") && strings.HasSuffix(part, ">") {
 		return true
@@ -522,7 +855,7 @@ func (u *AdvUserArg) Matches(def *ArgDef, part string) bool {
 	return false
 }
 
-func (u *AdvUserArg) Parse(def *ArgDef, part string, data *Data) (interface{}, error) {
+func (u *AdvUserArg) ParseFromMessage(def *ArgDef, part string, data *Data) (interface{}, error) {
 
 	var user *discordgo.User
 	var ms *dstate.MemberState
@@ -544,10 +877,10 @@ func (u *AdvUserArg) Parse(def *ArgDef, part string, data *Data) (interface{}, e
 		}
 	}
 
-	if u.EnableUsernameSearch && data.GS != nil && ms == nil && user == nil {
+	if u.EnableUsernameSearch && data.GuildData != nil && ms == nil && user == nil {
 		// Search for username
 		var err error
-		ms, err = FindDiscordMemberByName(data.GS, part)
+		ms, err = FindDiscordMemberByName(data.GuildData.GS, part)
 		if err != nil {
 			return nil, err
 		}
@@ -569,18 +902,49 @@ func (u *AdvUserArg) Parse(def *ArgDef, part string, data *Data) (interface{}, e
 	}, nil
 }
 
+func (u *AdvUserArg) ParseFromInteraction(def *ArgDef, data *Data, options *SlashCommandsParseOptions) (val interface{}, err error) {
+	user, found, err := options.ExpectUserOpt(def.Name)
+	if err != nil {
+		return nil, err
+	}
+	if found {
+		// They used the user arg type
+		member, err := options.ExpectMember(def.Name)
+		if err != nil {
+			return nil, err
+		}
+
+		return &AdvUserMatch{
+			Member: dstate.MSFromDGoMember(data.GuildData.GS, member),
+			User:   user,
+		}, nil
+	}
+
+	// fall back by searching by ID
+	id, err := options.ExpectInt64(def.Name + "-ID")
+	if err != nil {
+		return nil, err
+	}
+
+	ms, user := u.SearchID(id, data)
+	return &AdvUserMatch{
+		Member: ms,
+		User:   user,
+	}, nil
+}
+
 func (u *AdvUserArg) SearchID(parsed int64, data *Data) (member *dstate.MemberState, user *discordgo.User) {
 
-	if data.GS != nil {
+	if data.GuildData != nil {
 		// attempt to fetch member
-		member = data.GS.MemberCopy(true, parsed)
+		member = data.GuildData.GS.MemberCopy(true, parsed)
 		if member != nil {
 			return member, member.DGoUser()
 		}
 
-		m, err := data.Session.GuildMember(data.GS.ID, parsed)
+		m, err := data.Session.GuildMember(data.GuildData.GS.ID, parsed)
 		if err == nil {
-			member = dstate.MSFromDGoMember(data.GS, m)
+			member = dstate.MSFromDGoMember(data.GuildData.GS, m)
 			return member, m.User
 		}
 	}
@@ -603,7 +967,7 @@ func (u *AdvUserArg) ParseMention(def *ArgDef, part string, data *Data) (user *d
 	}
 
 	parsed, _ := strconv.ParseInt(id, 10, 64)
-	for _, v := range data.Msg.Mentions {
+	for _, v := range data.TraditionalTriggerData.Message.Mentions {
 		if parsed == v.ID {
 			return v
 		}
@@ -622,4 +986,14 @@ func (u *AdvUserArg) HelpName() string {
 	}
 
 	return out
+}
+
+func (u *AdvUserArg) SlashCommandOptions(def *ArgDef) []*discordgo.ApplicationCommandOption {
+	// Give the user the ability to pick one of these, sadly discord slash commands does not have a basic "one of" type
+	optID := def.StandardSlashCommandOption(discordgo.CommandOptionTypeInteger)
+	optUser := def.StandardSlashCommandOption(discordgo.CommandOptionTypeUser)
+
+	optID.Name = optID.Name + "-ID"
+
+	return []*discordgo.ApplicationCommandOption{optUser, optID}
 }

@@ -2,6 +2,8 @@ package dcmd
 
 import (
 	"fmt"
+	"reflect"
+
 	"github.com/pkg/errors"
 )
 
@@ -14,6 +16,49 @@ func (i *InvalidInt) Error() string {
 }
 
 func (i *InvalidInt) IsUserError() bool {
+	return true
+}
+
+type ErrResolvedNotFound struct {
+	Key  string
+	ID   int64
+	Type string
+}
+
+func (r *ErrResolvedNotFound) Error() string {
+	return fmt.Sprintf("could not find resolved %s for arg %q with id %d", r.Type, r.Key, r.ID)
+}
+
+func (r *ErrResolvedNotFound) IsUserError() bool {
+	return true
+}
+
+type ErrArgExpectedType struct {
+	Name     string
+	Expected string
+	Got      string
+}
+
+func NewErrArgExpected(name string, expected string, got interface{}) error {
+	gotStr := ""
+	if got == nil {
+		gotStr = "nil"
+	} else {
+		gotStr = reflect.TypeOf(got).String()
+	}
+
+	return &ErrArgExpectedType{
+		Name:     name,
+		Expected: expected,
+		Got:      gotStr,
+	}
+}
+
+func (e *ErrArgExpectedType) Error() string {
+	return fmt.Sprintf("%s: got wrong argument type, expected: %q got %q", e.Name, e.Expected, e.Got)
+}
+
+func (e *ErrArgExpectedType) IsUserError() bool {
 	return true
 }
 

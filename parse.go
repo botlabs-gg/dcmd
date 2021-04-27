@@ -2,6 +2,8 @@ package dcmd
 
 import (
 	"strings"
+
+	"github.com/jonas747/discordgo"
 )
 
 var (
@@ -22,12 +24,139 @@ func ArgParserMW(inner RunFunc) RunFunc {
 		}
 
 		return inner(data)
+
 	}
 }
 
-// ParseCmdArgs is the standard argument parser
-// todo, more doc on the format
 func ParseCmdArgs(data *Data) error {
+	switch data.TriggerType {
+	case TriggerTypeSlashCommands:
+		return ParseCmdArgsFromInteraction(data)
+	default:
+		return ParseCmdArgsFromMessage(data)
+	}
+}
+
+func ParseCmdArgsFromInteraction(data *Data) error {
+	sorted := SortInteractionOptions(data)
+
+	// 	ParseFromInteraction(def *ArgDef, data *Data, options *SlashCommandsParseOptions) (val interface{}, err error)
+
+	// Helper map to ease parsing of args
+	optionsMap := make(map[string]*discordgo.ApplicationCommandInteractionDataOption)
+	for _, def := range sorted {
+		for _, opt := range def.interactionOptions {
+			optionsMap[opt.Name] = opt
+		}
+	}
+
+	opts := &SlashCommandsParseOptions{
+		Options:     optionsMap,
+		Interaction: data.SlashCommandTriggerData.Interaction,
+	}
+
+	data.Switches = make(map[string]*ParsedArg)
+
+	// start the actual parsing
+	for _, def := range sorted {
+		parsedDef := def.def.NewParsedDef()
+
+		if len(def.interactionOptions) < 1 {
+			// no options provided by the user
+			if def.required {
+				return ErrNotEnoughArguments
+			}
+			// not a reuired arg, just skip parsing it
+		} else {
+			parsed, err := def.def.Type.ParseFromInteraction(def.def, data, opts)
+			if err != nil {
+				return err
+			}
+			parsedDef.Value = parsed
+		}
+
+		if def.isSwitch {
+			data.Switches[def.def.Name] = parsedDef
+		} else {
+			data.Args = append(data.Args, parsedDef)
+		}
+	}
+
+	return nil
+}
+
+type sortedInteractionArg struct {
+	key                    string
+	interactionOptionNames []string
+	interactionOptions     []*discordgo.ApplicationCommandInteractionDataOption
+	def                    *ArgDef
+	isSwitch               bool
+	required               bool
+}
+
+func SortInteractionOptions(data *Data) map[string]*sortedInteractionArg {
+	sorted := make(map[string]*sortedInteractionArg)
+
+	argDefsCommand, argDefsOk := data.Cmd.Command.(CmdWithArgDefs)
+
+	if argDefsOk {
+		defs, required, combos := argDefsCommand.ArgDefs(data)
+		sortedDefs := sortInteractionArgDefs(data, defs, required, combos)
+		for k, v := range sortedDefs {
+			sorted[k] = v
+		}
+	}
+
+	switchesCmd, switchesOk := data.Cmd.Command.(CmdWithSwitches)
+	if switchesOk {
+		defs := switchesCmd.Switches()
+		sortedDefs := sortInteractionArgDefs(data, defs, 0, nil)
+		for k, v := range sortedDefs {
+			v.isSwitch = true
+			sorted[k] = v
+		}
+	}
+
+	return sorted
+}
+
+func sortInteractionArgDefs(data *Data, defs []*ArgDef, required int, combos [][]int) map[string]*sortedInteractionArg {
+	sorted := make(map[string]*sortedInteractionArg)
+
+	for i, v := range defs {
+		defOpts := v.Type.SlashCommandOptions(v)
+		sortedEntry := &sortedInteractionArg{
+			key:      v.Name,
+			def:      v,
+			required: i < required,
+		}
+
+		// match the spec options to the actual provided interaction options
+	OUTER:
+		for _, do := range defOpts {
+			sortedEntry.interactionOptionNames = append(sortedEntry.interactionOptionNames, do.Name)
+			for _, iv := range data.SlashCommandTriggerData.Options {
+				// Found a provided option that matched the arg def option
+				if strings.EqualFold(iv.Name, do.Name) {
+					sortedEntry.interactionOptions = append(sortedEntry.interactionOptions, iv)
+					continue OUTER
+				}
+			}
+		}
+
+		sorted[v.Name] = sortedEntry
+	}
+
+	return sorted
+}
+
+// ParseCmdArgsFromMessage parses arguments from a MESSAGE
+// will panic if used on slash commands
+func ParseCmdArgsFromMessage(data *Data) error {
+	if data.TraditionalTriggerData == nil {
+		panic("ParseCmdArgsFromMessage used on context without TraditionalTriggerData")
+	}
+
 	argDefsCommand, argDefsOk := data.Cmd.Command.(CmdWithArgDefs)
 	switchesCmd, switchesOk := data.Cmd.Command.(CmdWithSwitches)
 
@@ -37,7 +166,7 @@ func ParseCmdArgs(data *Data) error {
 	}
 
 	// Split up the args
-	split := SplitArgs(data.MsgStrippedPrefix)
+	split := SplitArgs(data.TraditionalTriggerData.MessageStrippedPrefix)
 
 	var err error
 	if switchesOk {
@@ -101,7 +230,7 @@ func ParseArgDefs(defs []*ArgDef, required int, combos [][]int, data *Data, spli
 			combined = split[i].Str
 		}
 
-		val, err := def.Type.Parse(def, combined, data)
+		val, err := def.Type.ParseFromMessage(def, combined, data)
 		if err != nil {
 			return err
 		}
@@ -168,7 +297,7 @@ func ParseSwitches(switches []*ArgDef, data *Data, split []*RawArg) ([]*RawArg, 
 		// so we need to skip the next RawArg
 		i++
 
-		val, err := matchedArg.Type.Parse(matchedArg, split[i].Str, data)
+		val, err := matchedArg.Type.ParseFromMessage(matchedArg, split[i].Str, data)
 		if err != nil {
 			// TODO: Use custom error type for helpfull errror
 			return nil, err

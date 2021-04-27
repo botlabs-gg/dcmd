@@ -2,6 +2,7 @@ package dcmd
 
 import (
 	"fmt"
+
 	"github.com/jonas747/discordgo"
 )
 
@@ -131,8 +132,10 @@ func FindSortedCommands(sets []*SortedCommandSet, cat *Category, container *Cont
 func GenerateHelp(d *Data, container *Container, formatter HelpFormatter) (embeds []*discordgo.MessageEmbed) {
 
 	invoked := ""
-	if d != nil && d.PrefixUsed != "" {
-		invoked = d.PrefixUsed + " "
+	if d != nil && d.TraditionalTriggerData != nil && d.TraditionalTriggerData.PrefixUsed != "" {
+		invoked = d.TraditionalTriggerData.PrefixUsed + " "
+	} else if d != nil && d.TriggerType == TriggerTypeSlashCommands {
+		invoked = "/"
 	}
 
 	sets := SortCommands(container, container)

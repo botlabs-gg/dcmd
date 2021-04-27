@@ -1,9 +1,7 @@
 package dcmd
 
 import (
-	"errors"
 	"fmt"
-	"reflect"
 	"strings"
 	"time"
 	"unicode"
@@ -25,39 +23,7 @@ func SendResponseInterface(data *Data, reply interface{}, escapeEveryoneMention 
 		allowedMentions.Parse = []discordgo.AllowedMentionType{discordgo.AllowedMentionTypeRoles, discordgo.AllowedMentionTypeUsers, discordgo.AllowedMentionTypeUsers}
 	}
 
-	switch t := reply.(type) {
-	case Response:
-		return t.Send(data)
-	case string:
-		if t != "" {
-			return SplitSendMessage(data.Session, data.Msg.ChannelID, t, allowedMentions)
-		}
-		return []*discordgo.Message{}, nil
-	case error:
-		if t != nil {
-			m := t.Error()
-			return SplitSendMessage(data.Session, data.Msg.ChannelID, m, allowedMentions)
-		}
-		return []*discordgo.Message{}, nil
-	case *discordgo.MessageEmbed:
-		m, err := data.Session.ChannelMessageSendEmbed(data.Msg.ChannelID, t)
-		return []*discordgo.Message{m}, err
-	case []*discordgo.MessageEmbed:
-		msgs := make([]*discordgo.Message, len(t))
-		for i, embed := range t {
-			m, err := data.Session.ChannelMessageSendEmbed(data.Msg.ChannelID, embed)
-			if err != nil {
-				return msgs, err
-			}
-			msgs[i] = m
-		}
-		return msgs, nil
-	case *discordgo.MessageSend:
-		m, err := data.Session.ChannelMessageSendComplex(data.Msg.ChannelID, t)
-		return []*discordgo.Message{m}, err
-	}
-
-	return nil, errors.New("Unknown reply type: " + reflect.TypeOf(reply).String() + " (Does not implement Response)")
+	return data.SendFollowupMessage(reply, allowedMentions)
 }
 
 // Temporary response deletes the inner response after Duration
@@ -89,9 +55,9 @@ func (t *TemporaryResponse) Send(data *Data) ([]*discordgo.Message, error) {
 			for i, m := range msgs {
 				ids[i] = m.ID
 			}
-			data.Session.ChannelMessagesBulkDelete(data.Msg.ChannelID, ids)
+			data.Session.ChannelMessagesBulkDelete(data.ChannelID, ids)
 		} else {
-			data.Session.ChannelMessageDelete(data.Msg.ChannelID, msgs[0].ID)
+			data.Session.ChannelMessageDelete(data.ChannelID, msgs[0].ID)
 		}
 	})
 	return msgs, nil
@@ -104,22 +70,29 @@ type FallbackEmebd struct {
 }
 
 func (fe *FallbackEmebd) Send(data *Data) ([]*discordgo.Message, error) {
-	channelPerms, err := data.Session.State.UserChannelPermissions(data.Session.State.User.ID, data.Msg.ChannelID)
-	if err != nil {
-		return nil, err
-	}
 
-	if channelPerms&discordgo.PermissionEmbedLinks != 0 {
-		m, err := data.Session.ChannelMessageSendEmbed(data.Msg.ChannelID, fe.MessageEmbed)
+	switch data.TriggerType {
+	case TriggerTypeSlashCommands:
+		// Slash commands can always send embed responses
+		return data.SendFollowupMessage(fe.MessageEmbed, discordgo.AllowedMentions{})
+	default:
+		channelPerms, err := data.Session.State.UserChannelPermissions(data.Session.State.User.ID, data.ChannelID)
 		if err != nil {
 			return nil, err
 		}
 
-		return []*discordgo.Message{m}, nil
-	}
+		if channelPerms&discordgo.PermissionEmbedLinks != 0 {
+			m, err := data.Session.ChannelMessageSendEmbed(data.ChannelID, fe.MessageEmbed)
+			if err != nil {
+				return nil, err
+			}
 
-	content := StringEmbed(fe.MessageEmbed) + "\n*I have no 'embed links' permissions here, this is a fallback. it looks prettier if i have that perm :)*"
-	return SplitSendMessage(data.Session, data.Msg.ChannelID, content, discordgo.AllowedMentions{})
+			return []*discordgo.Message{m}, nil
+		}
+
+		content := StringEmbed(fe.MessageEmbed) + "\n*I have no 'embed links' permissions here, this is a fallback. it looks prettier if i have that perm :)*"
+		return SplitSendMessage(data, content, discordgo.AllowedMentions{})
+	}
 }
 
 // StringEmbed turns the embed into the best
@@ -149,15 +122,26 @@ func StringEmbed(embed *discordgo.MessageEmbed) string {
 }
 
 // SplitSendMessage uses SplitString to make sure each message is within 2k characters and splits at last newline before that (if possible)
-func SplitSendMessage(s *discordgo.Session, channelID int64, contents string, allowedMentions discordgo.AllowedMentions) ([]*discordgo.Message, error) {
+func SplitSendMessage(data *Data, contents string, allowedMentions discordgo.AllowedMentions) ([]*discordgo.Message, error) {
 	result := make([]*discordgo.Message, 0, 1)
 
 	split := SplitString(contents, 2000)
 	for _, v := range split {
-		m, err := s.ChannelMessageSendComplex(channelID, &discordgo.MessageSend{
-			Content:         v,
-			AllowedMentions: allowedMentions,
-		})
+		var err error
+		var m *discordgo.Message
+		switch data.TriggerType {
+		case TriggerTypeSlashCommands:
+			m, err = data.Session.CreateFollowupMessage(data.SlashCommandTriggerData.Interaction.ApplicationID, data.SlashCommandTriggerData.Interaction.Token, &discordgo.WebhookParams{
+				Content:         v,
+				AllowedMentions: &allowedMentions,
+			})
+		default:
+			m, err = data.Session.ChannelMessageSendComplex(data.ChannelID, &discordgo.MessageSend{
+				Content:         v,
+				AllowedMentions: allowedMentions,
+			})
+		}
+
 		if err != nil {
 			return result, err
 		}

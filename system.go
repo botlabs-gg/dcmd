@@ -52,7 +52,7 @@ func (sys *System) HandleMessageCreate(s *discordgo.Session, m *discordgo.Messag
 // you should not add this as an discord handler directly, if you want to do that you should add "system.HandleMessageCreate" instead.
 func (sys *System) CheckMessage(s *discordgo.Session, m *discordgo.MessageCreate) error {
 
-	data, err := sys.FillData(s, m.Message)
+	data, err := sys.FillDataLegacyMessage(s, m.Message)
 	if err != nil {
 		return err
 	}
@@ -66,10 +66,22 @@ func (sys *System) CheckMessage(s *discordgo.Session, m *discordgo.MessageCreate
 	return sys.ResponseSender.SendResponse(data, response, err)
 }
 
+// CheckInteraction checks a interaction and runs a command if found
+func (sys *System) CheckInteraction(s *discordgo.Session, interaction *discordgo.Interaction) error {
+
+	data, err := sys.FillDataInteraction(s, interaction)
+	if err != nil {
+		return err
+	}
+
+	response, err := sys.Root.Run(data)
+	return sys.ResponseSender.SendResponse(data, response, err)
+}
+
 // CheckMessageWtihPrefetchedPrefix is the same as CheckMessage but you pass in a prefetched command prefix
 func (sys *System) CheckMessageWtihPrefetchedPrefix(s *discordgo.Session, m *discordgo.MessageCreate, prefetchedPrefix string) error {
 
-	data, err := sys.FillData(s, m.Message)
+	data, err := sys.FillDataLegacyMessage(s, m.Message)
 	if err != nil {
 		return err
 	}
@@ -86,9 +98,9 @@ func (sys *System) CheckMessageWtihPrefetchedPrefix(s *discordgo.Session, m *dis
 // FindPrefix checks if the message has a proper command prefix (either from the PrefixProvider or a direction mention to the bot)
 // It sets the source field, and MsgStripped in data if found
 func (sys *System) FindPrefix(data *Data) (found bool) {
-	if data.Msg.GuildID == 0 {
-		data.MsgStrippedPrefix = data.Msg.Content
-		data.Source = DMSource
+	if data.Source == TriggerSourceDM {
+		data.TraditionalTriggerData.MessageStrippedPrefix = data.TraditionalTriggerData.Message.Content
+		data.TriggerType = TriggerTypeDirect
 		return true
 	}
 
@@ -106,11 +118,11 @@ func (sys *System) FindPrefix(data *Data) (found bool) {
 		return false
 	}
 
-	data.PrefixUsed = prefix
+	data.TraditionalTriggerData.PrefixUsed = prefix
 
-	if strings.HasPrefix(data.Msg.Content, prefix) {
-		data.Source = PrefixSource
-		data.MsgStrippedPrefix = strings.TrimSpace(strings.Replace(data.Msg.Content, prefix, "", 1))
+	if strings.HasPrefix(data.TraditionalTriggerData.Message.Content, prefix) {
+		data.TriggerType = TriggerTypePrefix
+		data.TraditionalTriggerData.MessageStrippedPrefix = strings.TrimSpace(strings.Replace(data.TraditionalTriggerData.Message.Content, prefix, "", 1))
 		found = true
 	}
 
@@ -119,9 +131,10 @@ func (sys *System) FindPrefix(data *Data) (found bool) {
 
 // FindPrefixWithPrefetched is the same as FindPrefix but you pass in a prefetched command prefix
 func (sys *System) FindPrefixWithPrefetched(data *Data, commandPrefix string) (found bool) {
-	if data.Msg.GuildID == 0 {
-		data.MsgStrippedPrefix = data.Msg.Content
-		data.Source = DMSource
+	msg := data.TraditionalTriggerData.Message
+	if data.Source == TriggerSourceDM {
+		data.TraditionalTriggerData.MessageStrippedPrefix = msg.Content
+		data.TriggerType = TriggerTypeDirect
 		return true
 	}
 
@@ -129,11 +142,11 @@ func (sys *System) FindPrefixWithPrefetched(data *Data, commandPrefix string) (f
 		return true
 	}
 
-	data.PrefixUsed = commandPrefix
+	data.TraditionalTriggerData.PrefixUsed = commandPrefix
 
-	if strings.HasPrefix(data.Msg.Content, commandPrefix) {
-		data.Source = PrefixSource
-		data.MsgStrippedPrefix = strings.TrimSpace(strings.Replace(data.Msg.Content, commandPrefix, "", 1))
+	if strings.HasPrefix(msg.Content, commandPrefix) {
+		data.TriggerType = TriggerTypePrefix
+		data.TraditionalTriggerData.MessageStrippedPrefix = strings.TrimSpace(strings.Replace(msg.Content, commandPrefix, "", 1))
 		found = true
 	}
 
@@ -148,22 +161,23 @@ func (sys *System) FindMentionPrefix(data *Data) (found bool) {
 	ok := false
 	stripped := ""
 
+	msg := data.TraditionalTriggerData.Message
+
 	// Check for mention
 	id := discordgo.StrID(data.Session.State.User.ID)
-	if strings.Index(data.Msg.Content, "<@"+id+">") == 0 { // Normal mention
+	if strings.Index(msg.Content, "<@"+id+">") == 0 { // Normal mention
 		ok = true
-		stripped = strings.Replace(data.Msg.Content, "<@"+id+">", "", 1)
-		data.PrefixUsed = "<@" + id + ">"
-	} else if strings.Index(data.Msg.Content, "<@!"+id+">") == 0 { // Nickname mention
+		stripped = strings.Replace(msg.Content, "<@"+id+">", "", 1)
+		data.TraditionalTriggerData.PrefixUsed = "<@" + id + ">"
+	} else if strings.Index(msg.Content, "<@!"+id+">") == 0 { // Nickname mention
 		ok = true
-		data.PrefixUsed = "<@!" + id + ">"
-		stripped = strings.Replace(data.Msg.Content, "<@!"+id+">", "", 1)
+		data.TraditionalTriggerData.PrefixUsed = "<@!" + id + ">"
+		stripped = strings.Replace(msg.Content, "<@!"+id+">", "", 1)
 	}
 
 	if ok {
-		data.MsgStrippedPrefix = strings.TrimSpace(stripped)
-		data.Source = MentionSource
-
+		data.TraditionalTriggerData.MessageStrippedPrefix = strings.TrimSpace(stripped)
+		data.TriggerType = TriggerTypeMention
 		return true
 	}
 
@@ -176,23 +190,27 @@ var (
 	ErrMemberNotAvailable = errors.New("Member not provided in message")
 )
 
-func (sys *System) FillData(s *discordgo.Session, m *discordgo.Message) (*Data, error) {
+func (sys *System) FillDataLegacyMessage(s *discordgo.Session, m *discordgo.Message) (*Data, error) {
 	cs := sys.State.Channel(true, m.ChannelID)
 	if cs == nil && m.GuildID != 0 {
 		return nil, ErrChannelNotFound
 	}
 
 	data := &Data{
-		Msg:     m,
-		CS:      cs,
-		Session: s,
-		System:  sys,
+		Session:   s,
+		System:    sys,
+		ChannelID: m.ChannelID,
+		Author:    m.Author,
+		TraditionalTriggerData: &TraditionalTriggerData{
+			Message: m,
+		},
 	}
 
 	if m.GuildID == 0 {
-		data.Source = DMSource
+		data.Source = TriggerSourceDM
 	} else {
-		data.GS = cs.Guild
+		data.Source = TriggerSourceGuild
+
 		if m.Member == nil || m.Author == nil {
 			return nil, ErrMemberNotAvailable
 		}
@@ -200,7 +218,51 @@ func (sys *System) FillData(s *discordgo.Session, m *discordgo.Message) (*Data, 
 		member := *m.Member
 		member.User = m.Author // user field is not provided in Message.Member, its weird but *shrug*
 
-		data.MS = dstate.MSFromDGoMember(data.GS, &member)
+		data.GuildData = &GuildContextData{
+			CS: cs,
+			GS: cs.Guild,
+			MS: dstate.MSFromDGoMember(cs.Guild, &member),
+		}
+	}
+
+	return data, nil
+}
+
+func (sys *System) FillDataInteraction(s *discordgo.Session, interaction *discordgo.Interaction) (*Data, error) {
+	cs := sys.State.Channel(true, interaction.ChannelID)
+	if cs == nil && interaction.GuildID != 0 {
+		return nil, ErrChannelNotFound
+	}
+
+	user := interaction.User
+	if interaction.Member != nil {
+		user = interaction.Member.User
+	}
+
+	data := &Data{
+		Session:     s,
+		System:      sys,
+		ChannelID:   interaction.ChannelID,
+		Author:      user,
+		TriggerType: TriggerTypeSlashCommands,
+		SlashCommandTriggerData: &SlashCommandTriggerData{
+			Interaction: interaction,
+		},
+	}
+
+	if interaction.GuildID == 0 {
+		data.Source = TriggerSourceDM
+	} else {
+		data.Source = TriggerSourceGuild
+
+		// were working off the assumption that member is always provided when in a guild
+		member := *interaction.Member
+
+		data.GuildData = &GuildContextData{
+			CS: cs,
+			GS: cs.Guild,
+			MS: dstate.MSFromDGoMember(cs.Guild, &member),
+		}
 	}
 
 	return data, nil

@@ -1,7 +1,10 @@
 package dcmd
 
 import (
+	"errors"
 	"strings"
+
+	"github.com/jonas747/discordgo"
 )
 
 type MiddleWareFunc func(next RunFunc) RunFunc
@@ -56,48 +59,94 @@ var (
 	_ CmdWithDescriptions = (*Container)(nil)
 )
 
-func (c *Container) Descriptions(data *Data) (string, string) { return c.Description, c.LongDescription }
+func (c *Container) Descriptions(data *Data) (string, string) {
+	return c.Description, c.LongDescription
+}
 
 func (c *Container) Run(data *Data) (interface{}, error) {
-	if c.shouldIgnore(data) {
-		return nil, nil
-	}
 
-	matchingCmd, rest := c.FindCommand(data.MsgStrippedPrefix)
+	var matchingCmd *RegisteredCommand
 
-	data.ContainerChain = append(data.ContainerChain, c)
+	switch data.TriggerType {
+	case TriggerTypeSlashCommands:
+		// find the relevant interaction options slice depending on how deeply nested we are
+		depth := len(data.ContainerChain)
+		options := data.SlashCommandTriggerData.Interaction.Data.Options
+		name := data.SlashCommandTriggerData.Interaction.Data.Name
+		for i := 0; i < depth; i++ {
+			if options[0] == nil {
+				return nil, errors.New("Options is nil")
+			}
 
-	if matchingCmd == nil {
-		var defaultHandler RunFunc
-		if data.MsgStrippedPrefix == "" && data.Source == MentionSource && c.DefaultMention != nil {
-			defaultHandler = c.DefaultMention
-		} else if data.Source == MentionSource || data.Source == PrefixSource {
-			defaultHandler = c.NotFound
-		} else if data.Source == DMSource {
-			defaultHandler = c.DMNotFound
-		}
-		if defaultHandler != nil {
-			return defaultHandler(data)
+			name = options[0].Name
+			options = options[0].Options
 		}
 
-		// No handler to run, do nothing...
-		return nil, nil
-	} else {
-		if matchingCmd.Trigger.DisableInDM && data.Source == DMSource {
-			// Disabled in dms
-			return nil, nil
-		} else if matchingCmd.Trigger.DisableOutsideDM && data.Source != DMSource {
-			// Disabled outside dms
+		matchingCmd, _ = c.FindCommand(name)
+
+		// add to the container chain and set the parse helper
+		data.ContainerChain = append(data.ContainerChain, c)
+		data.SlashCommandTriggerData.Options = options
+
+		// for now we don't run a default handler on unknown slash commands
+		if matchingCmd == nil {
 			return nil, nil
 		}
+
+	default:
+
+		if c.shouldIgnore(data) {
+			return nil, nil
+		}
+
+		var rest string
+		matchingCmd, rest = c.FindCommand(data.TraditionalTriggerData.MessageStrippedPrefix)
+
+		data.ContainerChain = append(data.ContainerChain, c)
+
+		if matchingCmd == nil {
+			var defaultHandler RunFunc
+			if data.TraditionalTriggerData.MessageStrippedPrefix == "" && data.TriggerType == TriggerTypeMention && c.DefaultMention != nil {
+				defaultHandler = c.DefaultMention
+			} else if data.TriggerType == TriggerTypeMention || data.TriggerType == TriggerTypePrefix {
+				defaultHandler = c.NotFound
+			} else if data.TriggerType == TriggerTypeDirect {
+				defaultHandler = c.DMNotFound
+			}
+			if defaultHandler != nil {
+				return defaultHandler(data)
+			}
+
+			// No handler to run, do nothing...
+			return nil, nil
+		}
+
+		data.TraditionalTriggerData.MessageStrippedPrefix = rest
 	}
 
-	data.MsgStrippedPrefix = rest
 	data.Cmd = matchingCmd
+
+	if matchingCmd.Trigger.DisableInDM && data.Source == TriggerSourceDM {
+		// Disabled in dms
+		return nil, nil
+	} else if matchingCmd.Trigger.DisableOutsideDM && data.Source != TriggerSourceDM {
+		// Disabled outside dms
+		return nil, nil
+	}
 
 	if _, ok := matchingCmd.Command.(*Container); ok {
 		return matchingCmd.Command.Run(data)
 
+	}
+
+	// pong the interaction
+	if data.TriggerType == TriggerTypeSlashCommands {
+		err := data.Session.CreateInteractionResponse(data.SlashCommandTriggerData.Interaction.ID, data.SlashCommandTriggerData.Interaction.Token, &discordgo.InteractionResponse{
+			Kind: discordgo.InteractionResponseTypeDeferredChannelMessageWithSource,
+		})
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	// Build the run chain
@@ -121,11 +170,11 @@ func (c *Container) Run(data *Data) (interface{}, error) {
 }
 
 func (c *Container) shouldIgnore(data *Data) bool {
-	if c.IgnoreBots && data.Msg.Author.Bot {
+	if c.IgnoreBots && data.Author.Bot {
 		return true
 	}
 
-	if data.Source == DMSource && !c.RunInDM {
+	if data.Source == TriggerSourceDM && !c.RunInDM {
 		return true
 	}
 
