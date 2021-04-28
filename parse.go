@@ -451,7 +451,7 @@ func FindCombo(defs []*ArgDef, combos [][]int, args []*RawArg) (combo []int, ok 
 
 	if len(combos) < 1 {
 		out := make([]int, len(defs))
-		for k, _ := range out {
+		for k := range out {
 			out[k] = k
 		}
 		return out, true

@@ -103,7 +103,7 @@ func SortCommands(closestGroupContainer *Container, cmdContainer *Container) []*
 		}
 
 		containers = append(containers, &SortedCommandSet{
-			Commands:  []*SortedCommandEntry{&SortedCommandEntry{Cmd: cmd, Container: cmdContainer}},
+			Commands:  []*SortedCommandEntry{{Cmd: cmd, Container: cmdContainer}},
 			Category:  keyCat,
 			Container: keyCont,
 		})

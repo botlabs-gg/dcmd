@@ -191,7 +191,7 @@ func (p *ParsedArg) AdvUser() *AdvUserMatch {
 func NewParsedArgs(defs []*ArgDef) []*ParsedArg {
 	out := make([]*ParsedArg, len(defs))
 
-	for k, _ := range out {
+	for k := range out {
 		out[k] = defs[k].NewParsedDef()
 	}
 
