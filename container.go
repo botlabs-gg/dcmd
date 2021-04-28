@@ -2,6 +2,8 @@ package dcmd
 
 import (
 	"errors"
+	"fmt"
+	"regexp"
 	"strings"
 
 	"github.com/jonas747/discordgo"
@@ -253,6 +255,9 @@ func (c *Container) Sub(mainName string, aliases ...string) *Container {
 }
 
 func (c *Container) AddCommand(cmd Cmd, trigger *Trigger) *RegisteredCommand {
+	// maybe we should just return a error here instead?
+	ValidateCommandPanic(cmd, trigger)
+
 	wrapped := &RegisteredCommand{
 		Command: cmd,
 		Trigger: trigger,
@@ -324,4 +329,42 @@ func (c *Container) BuildMiddlewareChains(containerChain []*Container) {
 		}
 		cmd.builtFullMiddlewareChain = last
 	}
+}
+
+// The regex provided for validation from the discord docs
+var CmdNameRegex = regexp.MustCompile(`^[\w-]{1,32}$`)
+
+func ValidateCommandPanic(cmd Cmd, trigger *Trigger) {
+	if err := ValidateCommand(cmd, trigger); err != nil {
+		panic(fmt.Sprintf("Command %s failed validation: %v", trigger.Names[0], err))
+	}
+}
+
+func ValidateCommand(cmd Cmd, trigger *Trigger) error {
+	if !CmdNameRegex.MatchString(trigger.Names[0]) {
+		return errors.New("Name dosen't match legal regex")
+	}
+
+	argDefsCommand, argDefsOk := cmd.(CmdWithArgDefs)
+	if argDefsOk {
+		defs, _, _ := argDefsCommand.ArgDefs(nil)
+		for _, v := range defs {
+			if !CmdNameRegex.MatchString(v.Name) {
+				return errors.New(v.Name + ": arg dosn't match legal regex")
+			}
+		}
+	}
+
+	switchesCmd, switchesOk := cmd.(CmdWithSwitches)
+	if switchesOk {
+		defs := switchesCmd.Switches()
+
+		for _, v := range defs {
+			if !CmdNameRegex.MatchString(v.Name) {
+				return errors.New(v.Name + ": switch dosn't match legal regex")
+			}
+		}
+	}
+
+	return nil
 }

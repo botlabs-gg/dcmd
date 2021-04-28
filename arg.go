@@ -12,7 +12,6 @@ import (
 // ArgDef represents a argument definition, either a switch or plain arg
 type ArgDef struct {
 	Name    string
-	Switch  string
 	Type    ArgType
 	Help    string
 	Default interface{}

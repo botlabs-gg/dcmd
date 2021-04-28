@@ -2,6 +2,7 @@ package dcmd
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/jonas747/discordgo"
 )
@@ -258,7 +259,7 @@ func (s *StdHelpFormatter) Switches(cmd Cmd) (str string) {
 	switches := cast.Switches()
 
 	for _, sw := range switches {
-		str += "[-" + sw.Switch + " " + s.ArgDef(sw) + "]\n"
+		str += "[-" + strings.ToLower(sw.Name) + " " + s.ArgDef(sw) + "]\n"
 	}
 
 	return

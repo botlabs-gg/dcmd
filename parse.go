@@ -249,7 +249,7 @@ func ParseSwitches(switches []*ArgDef, data *Data, split []*RawArg) ([]*RawArg, 
 	// Initialise the parsed switches
 	parsedSwitches := make(map[string]*ParsedArg)
 	for _, v := range switches {
-		parsedSwitches[v.Switch] = &ParsedArg{
+		parsedSwitches[v.Name] = &ParsedArg{
 			Value: v.Default,
 			Def:   v,
 		}
@@ -270,7 +270,7 @@ func ParseSwitches(switches []*ArgDef, data *Data, split []*RawArg) ([]*RawArg, 
 		rest := raw.Str[1:]
 		var matchedArg *ArgDef
 		for _, v := range switches {
-			if v.Switch == rest {
+			if v.Name == rest {
 				matchedArg = v
 				break
 			}
@@ -282,8 +282,8 @@ func ParseSwitches(switches []*ArgDef, data *Data, split []*RawArg) ([]*RawArg, 
 		}
 
 		if matchedArg.Type == nil {
-			parsedSwitches[matchedArg.Switch].Raw = raw
-			parsedSwitches[matchedArg.Switch].Value = true
+			parsedSwitches[matchedArg.Name].Raw = raw
+			parsedSwitches[matchedArg.Name].Value = true
 			continue
 		}
 
@@ -303,8 +303,8 @@ func ParseSwitches(switches []*ArgDef, data *Data, split []*RawArg) ([]*RawArg, 
 			return nil, err
 		}
 
-		parsedSwitches[matchedArg.Switch].Raw = raw
-		parsedSwitches[matchedArg.Switch].Value = val
+		parsedSwitches[matchedArg.Name].Raw = raw
+		parsedSwitches[matchedArg.Name].Value = val
 	}
 	data.Switches = parsedSwitches
 	return newRaws, nil
