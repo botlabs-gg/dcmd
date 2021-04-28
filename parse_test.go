@@ -2,8 +2,9 @@ package dcmd
 
 import (
 	"fmt"
-	"github.com/stretchr/testify/assert"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestParseArgDefs(t *testing.T) {
@@ -56,13 +57,13 @@ func TestParseSwitches(t *testing.T) {
 		defs         []*ArgDef
 		expectedArgs []*ParsedArg
 	}{
-		{"simple int", "-i 15", []*ArgDef{{Switch: "i", Type: Int}}, []*ParsedArg{{Value: int64(15)}}},
-		{"simple float", "-f 15.5", []*ArgDef{{Switch: "f", Type: Float}}, []*ParsedArg{{Value: float64(15.5)}}},
-		{"simple string", "-s hello", []*ArgDef{{Switch: "s", Type: String}}, []*ParsedArg{{Value: "hello"}}},
-		{"simple string, long switch", "-string hello", []*ArgDef{{Switch: "string", Type: String}}, []*ParsedArg{{Value: "hello"}}},
-		{"int float", "-i 15 -f 30.5", []*ArgDef{{Switch: "i", Type: Int}, {Switch: "f", Type: Float}}, []*ParsedArg{{Value: int64(15)}, {Value: float64(30.5)}}},
-		{"string int", "-s hey_man -i 30", []*ArgDef{{Switch: "s", Type: String}, {Switch: "i", Type: Int}}, []*ParsedArg{{Value: "hey_man"}, {Value: int64(30)}}},
-		{"quoted strings", "-s1 first -s2 `middle quoted` -s3 last", []*ArgDef{{Switch: "s1", Type: String}, {Switch: "s2", Type: String}, {Switch: "s3", Type: String}}, []*ParsedArg{{Value: "first"}, {Value: "middle quoted"}, {Value: "last"}}},
+		{"simple int", "-i 15", []*ArgDef{{Name: "i", Type: Int}}, []*ParsedArg{{Value: int64(15)}}},
+		{"simple float", "-f 15.5", []*ArgDef{{Name: "f", Type: Float}}, []*ParsedArg{{Value: float64(15.5)}}},
+		{"simple string", "-s hello", []*ArgDef{{Name: "s", Type: String}}, []*ParsedArg{{Value: "hello"}}},
+		{"simple string, long switch", "-string hello", []*ArgDef{{Name: "string", Type: String}}, []*ParsedArg{{Value: "hello"}}},
+		{"int float", "-i 15 -f 30.5", []*ArgDef{{Name: "i", Type: Int}, {Name: "f", Type: Float}}, []*ParsedArg{{Value: int64(15)}, {Value: float64(30.5)}}},
+		{"string int", "-s hey_man -i 30", []*ArgDef{{Name: "s", Type: String}, {Name: "i", Type: Int}}, []*ParsedArg{{Value: "hey_man"}, {Value: int64(30)}}},
+		{"quoted strings", "-s1 first -s2 `middle quoted` -s3 last", []*ArgDef{{Name: "s1", Type: String}, {Name: "s2", Type: String}, {Name: "s3", Type: String}}, []*ParsedArg{{Value: "first"}, {Value: "middle quoted"}, {Value: "last"}}},
 	}
 
 	for i, v := range cases {
@@ -76,7 +77,7 @@ func TestParseSwitches(t *testing.T) {
 
 			// Check if we got the expected output
 			for i, ea := range v.expectedArgs {
-				assert.Equal(t, ea.Value, d.Switches[v.defs[i].Switch].Value, "Should be equal")
+				assert.Equal(t, ea.Value, d.Switches[v.defs[i].Name].Value, "Should be equal")
 			}
 		})
 	}

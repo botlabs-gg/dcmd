@@ -71,12 +71,18 @@ func TestMiddlewareOrder(t *testing.T) {
 
 	doTest := func() {
 		data1 := &Data{
-			MsgStrippedPrefix: "test",
-			Source:            PrefixSource,
+			TraditionalTriggerData: &TraditionalTriggerData{
+				MessageStrippedPrefix: "test",
+			},
+			Source:      TriggerSourceGuild,
+			TriggerType: TriggerTypePrefix,
 		}
 		data2 := &Data{
-			MsgStrippedPrefix: "sub test",
-			Source:            PrefixSource,
+			TraditionalTriggerData: &TraditionalTriggerData{
+				MessageStrippedPrefix: "sub test",
+			},
+			Source:      TriggerSourceGuild,
+			TriggerType: TriggerTypePrefix,
 		}
 
 		i = 0

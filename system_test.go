@@ -57,19 +57,20 @@ func TestFindPrefix(t *testing.T) {
 	}
 
 	cases := []struct {
-		channel          *discordgo.Channel
-		msgContent       string
-		expectedStripped string
-		shouldBeFound    bool
-		expectedSource   TriggerSource
-		mentions         []*discordgo.User
+		channel             *discordgo.Channel
+		msgContent          string
+		expectedStripped    string
+		shouldBeFound       bool
+		expectedSource      TriggerSource
+		expectedTriggerType TriggerType
+		mentions            []*discordgo.User
 	}{
-		{testChannelNoPriv, "!cmd", "cmd", true, PrefixSource, nil},
-		{testChannelNoPriv, "cmd", "cmd", false, PrefixSource, nil},
-		{testChannelNoPriv, "<@" + TestUserIDStr + ">cmd", "cmd", true, MentionSource, []*discordgo.User{&discordgo.User{ID: TestUserID}}},
-		{testChannelNoPriv, "<@" + TestUserIDStr + "> cmd", "cmd", true, MentionSource, []*discordgo.User{&discordgo.User{ID: TestUserID}}},
-		{testChannelNoPriv, "<@" + TestUserIDStr + " cmd", "", false, MentionSource, nil},
-		{testChannelPriv, "cmd", "cmd", true, DMSource, nil},
+		{testChannelNoPriv, "!cmd", "cmd", true, TriggerSourceGuild, TriggerTypePrefix, nil},
+		{testChannelNoPriv, "cmd", "cmd", false, TriggerSourceGuild, TriggerTypePrefix, nil},
+		{testChannelNoPriv, "<@" + TestUserIDStr + ">cmd", "cmd", true, TriggerSourceGuild, TriggerTypeMention, []*discordgo.User{{ID: TestUserID}}},
+		{testChannelNoPriv, "<@" + TestUserIDStr + "> cmd", "cmd", true, TriggerSourceGuild, TriggerTypeMention, []*discordgo.User{{ID: TestUserID}}},
+		{testChannelNoPriv, "<@" + TestUserIDStr + " cmd", "", false, TriggerSourceGuild, TriggerTypeMention, nil},
+		{testChannelPriv, "cmd", "cmd", true, TriggerSourceDM, TriggerTypeDirect, nil},
 	}
 
 	for k, v := range cases {
@@ -77,14 +78,17 @@ func TestFindPrefix(t *testing.T) {
 			testData := &Data{
 				Session: testSession,
 				// Channel: v.channel,
-				Msg: &discordgo.Message{
-					Content:  v.msgContent,
-					Mentions: v.mentions,
+				TraditionalTriggerData: &TraditionalTriggerData{
+					Message: &discordgo.Message{
+						Content:  v.msgContent,
+						Mentions: v.mentions,
+					},
 				},
+				Source: v.expectedSource,
 			}
 
-			if v.expectedSource != DMSource {
-				testData.Msg.GuildID = 1
+			if v.expectedSource != TriggerSourceDM {
+				testData.TraditionalTriggerData.Message.GuildID = 1
 			}
 
 			found := testSystem.FindPrefix(testData)
@@ -92,8 +96,8 @@ func TestFindPrefix(t *testing.T) {
 			if !found {
 				return
 			}
-			assert.Equal(t, v.expectedStripped, testData.MsgStrippedPrefix, "Should be stripped off of prefix correctly")
-			assert.Equal(t, v.expectedSource, testData.Source, "Should have the proper prefix")
+			assert.Equal(t, v.expectedStripped, testData.TraditionalTriggerData.MessageStrippedPrefix, "Should be stripped off of prefix correctly")
+			assert.Equal(t, v.expectedTriggerType, testData.TriggerType, "Should have the proper trigger type")
 		})
 	}
 }

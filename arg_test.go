@@ -13,7 +13,7 @@ func TestIntArg(t *testing.T) {
 
 	assert.True(t, Int.Matches(nil, part), "Should match")
 
-	v, err := Int.Parse(nil, part, nil)
+	v, err := Int.ParseFromMessage(nil, part, nil)
 	assert.NoError(t, err, "Should parse sucessfully")
 	assert.Equal(t, v, expected, "Should be equal")
 
@@ -26,7 +26,7 @@ func TestFloatArg(t *testing.T) {
 
 	assert.True(t, Float.Matches(nil, part), "Should match")
 
-	v, err := Float.Parse(nil, part, nil)
+	v, err := Float.ParseFromMessage(nil, part, nil)
 	assert.NoError(t, err, "Should parse sucessfully")
 	assert.Equal(t, v, expected, "Should be equal")
 
@@ -35,8 +35,10 @@ func TestFloatArg(t *testing.T) {
 
 func TestUserIDArg(t *testing.T) {
 	d := &Data{
-		Msg: &discordgo.Message{
-			Mentions: []*discordgo.User{},
+		TraditionalTriggerData: &TraditionalTriggerData{
+			Message: &discordgo.Message{
+				Mentions: []*discordgo.User{},
+			},
 		},
 	}
 
@@ -56,7 +58,7 @@ func TestUserIDArg(t *testing.T) {
 			matches := arg.Matches(nil, c.part)
 			assert.Equal(t, c.match, matches, "Incorrect match")
 			if matches {
-				parsed, err := arg.Parse(nil, c.part, d)
+				parsed, err := arg.ParseFromMessage(nil, c.part, d)
 				assert.NoError(t, err, "Should parse sucessfully")
 				assert.Equal(t, c.result, parsed)
 			}
