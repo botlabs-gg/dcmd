@@ -123,12 +123,21 @@ func SortInteractionOptions(data *Data) map[string]*sortedInteractionArg {
 func sortInteractionArgDefs(data *Data, defs []*ArgDef, required int, combos [][]int) map[string]*sortedInteractionArg {
 	sorted := make(map[string]*sortedInteractionArg)
 
+	// For now we use the smallest argument combo for the required args
+	// The proper way to handle this would be to register multiple commands like subcommands
+	smallestCombo := findSmallestCombo(defs, required, combos)
+
 	for i, v := range defs {
+		isRequired := false
+		if containsInt(smallestCombo, i) {
+			isRequired = true
+		}
+
 		defOpts := v.Type.SlashCommandOptions(v)
 		sortedEntry := &sortedInteractionArg{
 			key:      v.Name,
 			def:      v,
-			required: i < required,
+			required: isRequired,
 		}
 
 		// match the spec options to the actual provided interaction options
@@ -148,6 +157,38 @@ func sortInteractionArgDefs(data *Data, defs []*ArgDef, required int, combos [][
 	}
 
 	return sorted
+}
+
+func containsInt(s []int, i int) bool {
+	for _, v := range s {
+		if v == i {
+			return true
+		}
+	}
+
+	return false
+}
+
+func findSmallestCombo(defs []*ArgDef, requiredArgs int, combos [][]int) []int {
+	var smallest []int
+	if len(combos) > 0 {
+		first := true
+		// combos takes presedence as to not break backwards compatibility
+		for _, v := range combos {
+			if first || len(v) < len(smallest) {
+				smallest = v
+				first = false
+			}
+		}
+
+		return smallest
+	}
+
+	for i := 0; i < requiredArgs; i++ {
+		smallest = append(smallest, i)
+	}
+
+	return smallest
 }
 
 // ParseCmdArgsFromMessage parses arguments from a MESSAGE
