@@ -4,7 +4,7 @@ go 1.13
 
 require (
 	github.com/bwmarrin/discordgo v0.23.2
-	github.com/jonas747/discordgo v1.5.3
+	github.com/jonas747/discordgo v1.5.4-0.20210430174034-dbaebf06828a
 	github.com/jonas747/dstate/v2 v2.0.2
 	github.com/pkg/errors v0.9.1
 	github.com/stretchr/testify v1.7.0
