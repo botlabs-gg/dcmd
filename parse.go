@@ -94,34 +94,36 @@ type sortedInteractionArg struct {
 	required               bool
 }
 
-func SortInteractionOptions(data *Data) map[string]*sortedInteractionArg {
-	sorted := make(map[string]*sortedInteractionArg)
+func SortInteractionOptions(data *Data) []*sortedInteractionArg {
+	sorted := make([]*sortedInteractionArg, 0)
 
 	argDefsCommand, argDefsOk := data.Cmd.Command.(CmdWithArgDefs)
 
 	if argDefsOk {
 		defs, required, combos := argDefsCommand.ArgDefs(data)
 		sortedDefs := sortInteractionArgDefs(data, defs, required, combos)
-		for k, v := range sortedDefs {
-			sorted[k] = v
-		}
+		sorted = append(sorted, sortedDefs...)
+		// for k, v := range sortedDefs {
+		// 	sorted[k] = v
+		// }
 	}
 
 	switchesCmd, switchesOk := data.Cmd.Command.(CmdWithSwitches)
 	if switchesOk {
 		defs := switchesCmd.Switches()
 		sortedDefs := sortInteractionArgDefs(data, defs, 0, nil)
-		for k, v := range sortedDefs {
+		sorted = append(sorted, sortedDefs...)
+
+		for _, v := range sortedDefs {
 			v.isSwitch = true
-			sorted[k] = v
 		}
 	}
 
 	return sorted
 }
 
-func sortInteractionArgDefs(data *Data, defs []*ArgDef, required int, combos [][]int) map[string]*sortedInteractionArg {
-	sorted := make(map[string]*sortedInteractionArg)
+func sortInteractionArgDefs(data *Data, defs []*ArgDef, required int, combos [][]int) []*sortedInteractionArg {
+	sorted := make([]*sortedInteractionArg, 0)
 
 	// For now we use the smallest argument combo for the required args
 	// The proper way to handle this would be to register multiple commands like subcommands
@@ -153,7 +155,7 @@ func sortInteractionArgDefs(data *Data, defs []*ArgDef, required int, combos [][
 			}
 		}
 
-		sorted[v.Name] = sortedEntry
+		sorted = append(sorted, sortedEntry)
 	}
 
 	return sorted
