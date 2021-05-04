@@ -285,7 +285,7 @@ func (sopts *SlashCommandsParseOptions) ExpectUserOpt(name string) (*discordgo.U
 		return nil, found, err
 	}
 
-	user, ok := sopts.Interaction.Data.Resolved.Users[id]
+	user, ok := sopts.Interaction.DataCommand.Resolved.Users[id]
 	if !ok {
 		return nil, true, &ErrResolvedNotFound{Key: name, ID: id, Type: "user"}
 	}
@@ -309,7 +309,7 @@ func (sopts *SlashCommandsParseOptions) ExpectMemberOpt(name string) (*discordgo
 		return nil, found, err
 	}
 
-	user, ok := sopts.Interaction.Data.Resolved.Members[id]
+	user, ok := sopts.Interaction.DataCommand.Resolved.Members[id]
 	if !ok {
 		return nil, true, &ErrResolvedNotFound{Key: name, ID: id, Type: "member"}
 	}
@@ -333,7 +333,7 @@ func (sopts *SlashCommandsParseOptions) ExpectRoleOpt(name string) (*discordgo.R
 		return nil, found, err
 	}
 
-	user, ok := sopts.Interaction.Data.Resolved.Roles[id]
+	user, ok := sopts.Interaction.DataCommand.Resolved.Roles[id]
 	if !ok {
 		return nil, true, &ErrResolvedNotFound{Key: name, ID: id, Type: "role"}
 	}
@@ -357,7 +357,7 @@ func (sopts *SlashCommandsParseOptions) ExpectChannelOpt(name string) (*discordg
 		return nil, found, err
 	}
 
-	user, ok := sopts.Interaction.Data.Resolved.Channels[id]
+	user, ok := sopts.Interaction.DataCommand.Resolved.Channels[id]
 	if !ok {
 		return nil, true, &ErrResolvedNotFound{Key: name, ID: id, Type: "channel"}
 	}

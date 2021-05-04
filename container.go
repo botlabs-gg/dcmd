@@ -73,8 +73,8 @@ func (c *Container) Run(data *Data) (interface{}, error) {
 	case TriggerTypeSlashCommands:
 		// find the relevant interaction options slice depending on how deeply nested we are
 		depth := len(data.ContainerChain)
-		options := data.SlashCommandTriggerData.Interaction.Data.Options
-		name := data.SlashCommandTriggerData.Interaction.Data.Name
+		options := data.SlashCommandTriggerData.Interaction.DataCommand.Options
+		name := data.SlashCommandTriggerData.Interaction.DataCommand.Name
 		for i := 0; i < depth; i++ {
 			if options[0] == nil {
 				return nil, errors.New("Options is nil")
