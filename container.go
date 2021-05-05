@@ -153,7 +153,7 @@ func (c *Container) Run(data *Data) (interface{}, error) {
 
 	// Were extra smart about extracting the options so that we can
 	// provide more commands than there actually are (e.g by-id and by-user subcommands that resolve to the same command)
-	if len(data.SlashCommandTriggerData.Options) == 1 && data.SlashCommandTriggerData.Options[0].Kind == discordgo.CommandOptionTypeSubCommand {
+	if data.TriggerType == TriggerTypeSlashCommands && len(data.SlashCommandTriggerData.Options) == 1 && data.SlashCommandTriggerData.Options[0].Kind == discordgo.CommandOptionTypeSubCommand {
 		data.SlashCommandTriggerData.Options = data.SlashCommandTriggerData.Options[0].Options
 	}
 
