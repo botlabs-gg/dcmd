@@ -159,6 +159,11 @@ func (d *Data) SendFollowupMessage(reply interface{}, allowedMentions discordgo.
 				Content:         t.Content,
 				TTS:             t.Tts,
 				AllowedMentions: &t.AllowedMentions,
+				File:            t.File,
+			}
+
+			if len(t.Files) > 0 {
+				params.File = t.Files[0]
 			}
 
 			if t.Embed != nil {
