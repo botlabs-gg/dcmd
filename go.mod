@@ -11,7 +11,7 @@ require (
 	github.com/gorilla/websocket v1.4.2 // indirect
 	github.com/hashicorp/go-cleanhttp v0.5.2 // indirect
 	github.com/jonas747/dcmd v1.2.4
-	github.com/jonas747/discordgo v1.5.4
+	github.com/jonas747/discordgo v1.5.5
 	github.com/jonas747/dstate/v2 v2.0.2
 	github.com/mailru/easyjson v0.7.7 // indirect
 	github.com/pkg/errors v0.9.1
