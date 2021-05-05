@@ -68,11 +68,22 @@ func ParseCmdArgsFromInteraction(data *Data) error {
 			}
 			// not a reuired arg, just skip parsing it
 		} else {
-			parsed, err := def.def.Type.ParseFromInteraction(def.def, data, opts)
-			if err != nil {
-				return err
+
+			if def.def.Type == nil {
+				parsed, err := opts.ExpectBool(def.def.Name)
+				if err != nil {
+					return err
+				}
+				parsedDef.Value = parsed
+			} else {
+				parsed, err := def.def.Type.ParseFromInteraction(def.def, data, opts)
+				if err != nil {
+					return err
+				}
+
+				parsedDef.Value = parsed
 			}
-			parsedDef.Value = parsed
+
 		}
 
 		if def.isSwitch {
@@ -135,7 +146,13 @@ func sortInteractionArgDefs(data *Data, defs []*ArgDef, required int, combos [][
 			isRequired = true
 		}
 
-		defOpts := v.Type.SlashCommandOptions(v)
+		var defOpts []*discordgo.ApplicationCommandOption
+		if v.Type != nil {
+			defOpts = v.Type.SlashCommandOptions(v)
+		} else {
+			defOpts = []*discordgo.ApplicationCommandOption{v.StandardSlashCommandOption(discordgo.CommandOptionTypeBoolean)}
+		}
+
 		sortedEntry := &sortedInteractionArg{
 			key:      v.Name,
 			def:      v,
