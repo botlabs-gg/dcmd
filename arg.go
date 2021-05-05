@@ -708,12 +708,13 @@ func (u *UserIDArg) ParseFromInteraction(def *ArgDef, data *Data, options *Slash
 		return user.ID, nil
 	}
 
-	id, err := options.ExpectInt64(def.Name + "-ID")
+	idStr, err := options.ExpectString(def.Name + "-ID")
 	if err != nil {
 		return nil, err
 	}
 
-	return id, nil
+	id, err := strconv.ParseInt(idStr, 10, 64)
+	return id, err
 }
 
 func (u *UserIDArg) HelpName() string {
@@ -722,7 +723,7 @@ func (u *UserIDArg) HelpName() string {
 
 func (u *UserIDArg) SlashCommandOptions(def *ArgDef) []*discordgo.ApplicationCommandOption {
 	// Give the user the ability to pick one of these, sadly discord slash commands does not have a basic "one of" type
-	optID := def.StandardSlashCommandOption(discordgo.CommandOptionTypeInteger)
+	optID := def.StandardSlashCommandOption(discordgo.CommandOptionTypeString)
 	optUser := def.StandardSlashCommandOption(discordgo.CommandOptionTypeUser)
 
 	optID.Name = optID.Name + "-ID"
