@@ -294,6 +294,7 @@ func (sopts *SlashCommandsParseOptions) ExpectUserOpt(name string) (*discordgo.U
 }
 
 func (sopts *SlashCommandsParseOptions) ExpectMember(name string) (*discordgo.Member, error) {
+
 	if v, found, err := sopts.ExpectMemberOpt(name); err != nil {
 		return nil, err
 	} else if found {
@@ -309,12 +310,19 @@ func (sopts *SlashCommandsParseOptions) ExpectMemberOpt(name string) (*discordgo
 		return nil, found, err
 	}
 
-	user, ok := sopts.Interaction.DataCommand.Resolved.Members[id]
+	member, ok := sopts.Interaction.DataCommand.Resolved.Members[id]
 	if !ok {
 		return nil, true, &ErrResolvedNotFound{Key: name, ID: id, Type: "member"}
 	}
 
-	return user, true, nil
+	user, ok := sopts.Interaction.DataCommand.Resolved.Users[id]
+	if !ok && member.User == nil {
+		return nil, true, &ErrResolvedNotFound{Key: name, ID: id, Type: "user"}
+	}
+
+	member.User = user
+
+	return member, true, nil
 }
 
 func (sopts *SlashCommandsParseOptions) ExpectRole(name string) (*discordgo.Role, error) {
