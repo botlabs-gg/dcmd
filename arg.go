@@ -203,6 +203,23 @@ type SlashCommandsParseOptions struct {
 	Interaction *discordgo.Interaction
 }
 
+func (sopts *SlashCommandsParseOptions) ExpectAny(name string) (interface{}, error) {
+	if v, ok := sopts.ExpectAnyOpt(name); ok {
+		return v, nil
+	} else {
+		return 0, NewErrArgExpected(name, "any", nil)
+	}
+}
+
+func (sopts *SlashCommandsParseOptions) ExpectAnyOpt(name string) (interface{}, bool) {
+	if v, ok := sopts.Options[strings.ToLower(name)]; ok {
+		return v.Value, true
+	}
+
+	return nil, false
+
+}
+
 func (sopts *SlashCommandsParseOptions) ExpectInt64(name string) (int64, error) {
 	if v, found, err := sopts.ExpectInt64Opt(name); err != nil {
 		return 0, err
@@ -391,6 +408,7 @@ type ArgType interface {
 var (
 	// Create some convenience instances
 	Int             = &IntArg{}
+	BigInt          = &IntArg{InteractionString: true}
 	Float           = &FloatArg{}
 	String          = &StringArg{}
 	User            = &UserArg{}
@@ -405,6 +423,9 @@ var (
 // If min and max are not equal then the value has to be within min and max or else it will fail parsing
 type IntArg struct {
 	Min, Max int64
+
+	// if we wanna support large numbers like snowflakes we have to use strings with interactions
+	InteractionString bool
 }
 
 var _ ArgType = (*IntArg)(nil)
@@ -430,9 +451,22 @@ func (i *IntArg) ParseFromMessage(def *ArgDef, part string, data *Data) (interfa
 }
 
 func (i *IntArg) ParseFromInteraction(def *ArgDef, data *Data, options *SlashCommandsParseOptions) (val interface{}, err error) {
-	v, err := options.ExpectInt64(def.Name)
+
+	any, err := options.ExpectAny(def.Name)
 	if err != nil {
 		return nil, err
+	}
+
+	var v int64
+	switch t := any.(type) {
+	case string:
+		v, err = strconv.ParseInt(t, 10, 64)
+		if err != nil {
+			return nil, err
+		}
+	case int64:
+		v = t
+	default:
 	}
 
 	// A valid range has been specified
@@ -450,6 +484,9 @@ func (i *IntArg) HelpName() string {
 }
 
 func (i *IntArg) SlashCommandOptions(def *ArgDef) []*discordgo.ApplicationCommandOption {
+	if i.InteractionString {
+		return []*discordgo.ApplicationCommandOption{def.StandardSlashCommandOption(discordgo.CommandOptionTypeString)}
+	}
 	return []*discordgo.ApplicationCommandOption{def.StandardSlashCommandOption(discordgo.CommandOptionTypeInteger)}
 }
 
