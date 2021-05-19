@@ -371,9 +371,15 @@ func ParseSwitches(switches []*ArgDef, data *Data, split []*RawArg) ([]*RawArg, 
 }
 
 var (
-	ArgContainers = []rune{
+	ArgContainerOpenRunes = []rune{
 		'"',
 		'`',
+		'“',
+	}
+	ArgContainerCloseRunes = []rune{
+		'"',
+		'`',
+		'”',
 	}
 )
 
@@ -388,7 +394,7 @@ func SplitArgs(in string) []*RawArg {
 
 	curBuf := ""
 	escape := false
-	var container rune
+	var openContainer, closeContainer rune
 	for _, r := range in {
 		// Apply or remove escape mode
 		if r == '\\' {
@@ -406,30 +412,32 @@ func SplitArgs(in string) []*RawArg {
 		isSpecialToken := true
 		if r == ' ' {
 			// Maybe seperate by space
-			if curBuf != "" && container == 0 && !escape {
+			if curBuf != "" && openContainer == 0 && !escape {
 				rawArgs = append(rawArgs, &RawArg{curBuf, 0})
 				curBuf = ""
 			} else if curBuf != "" {
 				curBuf += " "
 			}
-		} else if r == container && container != 0 {
+		} else if r == closeContainer && closeContainer != 0 {
 			// Split arg here
 			if escape {
 				curBuf += string(r)
 			} else {
-				rawArgs = append(rawArgs, &RawArg{curBuf, container})
+				rawArgs = append(rawArgs, &RawArg{curBuf, openContainer})
 				curBuf = ""
-				container = 0
+				closeContainer = 0
+				openContainer = 0
 			}
-		} else if container == 0 && curBuf == "" {
+		} else if openContainer == 0 && curBuf == "" {
 			// Check if we should start containing a arg
 			foundMatch := false
-			for _, v := range ArgContainers {
+			for i, v := range ArgContainerOpenRunes {
 				if v == r {
 					if escape {
 						curBuf += string(r)
 					} else {
-						container = v
+						openContainer = r
+						closeContainer = ArgContainerCloseRunes[i]
 					}
 					foundMatch = true
 					break
@@ -456,8 +464,8 @@ func SplitArgs(in string) []*RawArg {
 
 	// Something was left in the buffer just add it to the end
 	if curBuf != "" {
-		if container != 0 {
-			curBuf = string(container) + curBuf
+		if openContainer != 0 {
+			curBuf = string(openContainer) + curBuf
 		}
 		rawArgs = append(rawArgs, &RawArg{curBuf, 0})
 	}
