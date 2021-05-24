@@ -6,7 +6,7 @@ import (
 	"strings"
 
 	"github.com/jonas747/discordgo"
-	"github.com/jonas747/dstate/v2"
+	"github.com/jonas747/dstate/v3"
 )
 
 // ArgDef represents a argument definition, either a switch or plain arg
@@ -166,7 +166,7 @@ func (p *ParsedArg) User() *discordgo.User {
 
 	switch t := p.Value.(type) {
 	case *dstate.MemberState:
-		return t.DGoUser()
+		return &t.User
 	case *AdvUserMatch:
 		return t.User
 	}
@@ -604,9 +604,9 @@ func (u *UserArg) ParseFromMessage(def *ArgDef, part string, data *Data) (interf
 		return nil, &ImproperMention{part}
 	} else if !u.RequireMention && data.GuildData != nil {
 		// Search for username
-		m, err := FindDiscordMemberByName(data.GuildData.GS, part)
+		m, err := FindDiscordMemberByName(data.System.State, data.GuildData.GS, part)
 		if m != nil {
-			return m.DGoUser(), nil
+			return m.User, nil
 		}
 		return nil, err
 	}
@@ -630,44 +630,46 @@ func (u *UserArg) SlashCommandOptions(def *ArgDef) []*discordgo.ApplicationComma
 	return []*discordgo.ApplicationCommandOption{def.StandardSlashCommandOption(discordgo.CommandOptionTypeUser)}
 }
 
-var CustomUsernameSearchFunc func(gs *dstate.GuildState, query string) (*dstate.MemberState, error)
+var CustomUsernameSearchFunc func(state dstate.StateTracker, gs *dstate.GuildSet, query string) (*dstate.MemberState, error)
 
-func FindDiscordMemberByName(gs *dstate.GuildState, str string) (*dstate.MemberState, error) {
+func FindDiscordMemberByName(state dstate.StateTracker, gs *dstate.GuildSet, str string) (*dstate.MemberState, error) {
 	if CustomUsernameSearchFunc != nil {
-		return CustomUsernameSearchFunc(gs, str)
+		return CustomUsernameSearchFunc(state, gs, str)
 	}
-
-	gs.RLock()
-	defer gs.RUnlock()
 
 	lowerIn := strings.ToLower(str)
 
 	partialMatches := make([]*dstate.MemberState, 0, 5)
 	fullMatches := make([]*dstate.MemberState, 0, 5)
 
-	for _, v := range gs.Members {
-		if v == nil {
-			continue
+	state.IterateMembers(gs.ID, func(chunk []*dstate.MemberState) bool {
+		for _, v := range chunk {
+			if v == nil {
+				continue
+			}
+
+			if v.User.Username == "" {
+				continue
+			}
+
+			if strings.EqualFold(str, v.User.Username) || strings.EqualFold(str, v.Nick) {
+				fullMatches = append(fullMatches, v)
+				if len(fullMatches) >= 5 {
+					break
+				}
+
+			} else if len(partialMatches) < 5 {
+				if strings.Contains(strings.ToLower(v.User.Username), lowerIn) {
+					partialMatches = append(partialMatches, v)
+				}
+			}
 		}
 
-		if v.Username == "" {
-			continue
-		}
-
-		if strings.EqualFold(str, v.Username) || strings.EqualFold(str, v.Nick) {
-			fullMatches = append(fullMatches, v.Copy())
-			if len(fullMatches) >= 5 {
-				break
-			}
-		} else if len(partialMatches) < 5 {
-			if strings.Contains(strings.ToLower(v.Username), lowerIn) {
-				partialMatches = append(partialMatches, v)
-			}
-		}
-	}
+		return true
+	})
 
 	if len(fullMatches) == 1 {
-		return fullMatches[0].Copy(), nil
+		return fullMatches[0], nil
 	}
 
 	if len(fullMatches) == 0 && len(partialMatches) == 0 {
@@ -680,7 +682,7 @@ func FindDiscordMemberByName(gs *dstate.GuildState, str string) (*dstate.MemberS
 			out += ", "
 		}
 
-		out += "`" + v.Username + "`"
+		out += "`" + v.User.Username + "`"
 	}
 
 	for _, v := range partialMatches {
@@ -688,7 +690,7 @@ func FindDiscordMemberByName(gs *dstate.GuildState, str string) (*dstate.MemberS
 			out += ", "
 		}
 
-		out += "`" + v.Username + "`"
+		out += "`" + v.User.Username + "`"
 	}
 
 	if len(fullMatches) > 1 {
@@ -712,11 +714,7 @@ func (u *UserIDArg) Matches(def *ArgDef, part string) bool {
 
 	// Check for ID
 	_, err := strconv.ParseInt(part, 10, 64)
-	if err == nil {
-		return true
-	}
-
-	return false
+	return err == nil
 }
 
 func (u *UserIDArg) ParseFromMessage(def *ArgDef, part string, data *Data) (interface{}, error) {
@@ -790,11 +788,7 @@ func (ca *ChannelArg) Matches(def *ArgDef, part string) bool {
 
 	// Check for ID
 	_, err := strconv.ParseInt(part, 10, 64)
-	if err == nil {
-		return true
-	}
-
-	return false
+	return err == nil
 }
 
 func (ca *ChannelArg) ParseFromMessage(def *ArgDef, part string, data *Data) (interface{}, error) {
@@ -821,12 +815,9 @@ func (ca *ChannelArg) ParseFromMessage(def *ArgDef, part string, data *Data) (in
 		cID = id
 	}
 
-	data.GuildData.GS.RLock()
-	if c, ok := data.GuildData.GS.Channels[cID]; ok {
-		data.GuildData.GS.RUnlock()
+	if c := data.GuildData.GS.GetChannel(cID); c != nil {
 		return c, nil
 	}
-	data.GuildData.GS.RUnlock()
 
 	return nil, &ImproperMention{part}
 }
@@ -837,12 +828,15 @@ func (ca *ChannelArg) ParseFromInteraction(def *ArgDef, data *Data, options *Sla
 	}
 
 	channel, err := options.ExpectChannel(def.Name)
-	cs := data.GuildData.GS.Channel(true, channel.ID)
-	if cs == nil {
-		return nil, ErrChannelNotFound
+	if err != nil {
+		return nil, err
 	}
 
-	return cs, err
+	if cs := data.GuildData.GS.GetChannel(channel.ID); cs != nil {
+		return cs, nil
+	}
+
+	return ErrChannelNotFound, nil
 }
 
 func (ca *ChannelArg) HelpName() string {
@@ -925,7 +919,7 @@ func (u *AdvUserArg) ParseFromMessage(def *ArgDef, part string, data *Data) (int
 	if u.EnableUsernameSearch && data.GuildData != nil && ms == nil && user == nil {
 		// Search for username
 		var err error
-		ms, err = FindDiscordMemberByName(data.GuildData.GS, part)
+		ms, err = FindDiscordMemberByName(data.System.State, data.GuildData.GS, part)
 		if err != nil {
 			return nil, err
 		}
@@ -936,7 +930,7 @@ func (u *AdvUserArg) ParseFromMessage(def *ArgDef, part string, data *Data) (int
 	}
 
 	if ms != nil && user == nil {
-		user = ms.DGoUser()
+		user = &ms.User
 	} else if ms == nil && user != nil && !msFailed {
 		ms, user = u.SearchID(user.ID, data)
 	}
@@ -960,7 +954,7 @@ func (u *AdvUserArg) ParseFromInteraction(def *ArgDef, data *Data, options *Slas
 		}
 
 		return &AdvUserMatch{
-			Member: dstate.MSFromDGoMember(data.GuildData.GS, member),
+			Member: dstate.MemberStateFromMember(member),
 			User:   user,
 		}, nil
 	}
@@ -982,14 +976,14 @@ func (u *AdvUserArg) SearchID(parsed int64, data *Data) (member *dstate.MemberSt
 
 	if data.GuildData != nil {
 		// attempt to fetch member
-		member = data.GuildData.GS.MemberCopy(true, parsed)
+		member = data.System.State.GetMember(data.GuildData.GS.ID, parsed)
 		if member != nil {
-			return member, member.DGoUser()
+			return member, &member.User
 		}
 
 		m, err := data.Session.GuildMember(data.GuildData.GS.ID, parsed)
 		if err == nil {
-			member = dstate.MSFromDGoMember(data.GuildData.GS, m)
+			member = dstate.MemberStateFromMember(m)
 			return member, m.User
 		}
 	}

@@ -7,7 +7,7 @@ import (
 	"strings"
 
 	"github.com/jonas747/discordgo"
-	"github.com/jonas747/dstate/v2"
+	"github.com/jonas747/dstate/v3"
 	"github.com/pkg/errors"
 )
 
@@ -15,7 +15,7 @@ type System struct {
 	Root           *Container
 	Prefix         PrefixProvider
 	ResponseSender ResponseSender
-	State          *dstate.State
+	State          dstate.StateTracker
 }
 
 func NewStandardSystem(staticPrefix string) (system *System) {
@@ -186,14 +186,26 @@ func (sys *System) FindMentionPrefix(data *Data) (found bool) {
 }
 
 var (
-	ErrChannelNotFound    = errors.New("Channel not found")
-	ErrMemberNotAvailable = errors.New("Member not provided in message")
+	ErrChannelNotFound               = errors.New("Channel not found")
+	ErrGuildNotFound                 = errors.New("Guild not found")
+	ErrMemberNotAvailable            = errors.New("Member not provided in message")
+	ErrMemberNotAvailableInteraction = errors.New("Member not provided in interaction")
 )
 
 func (sys *System) FillDataLegacyMessage(s *discordgo.Session, m *discordgo.Message) (*Data, error) {
-	cs := sys.State.Channel(true, m.ChannelID)
-	if cs == nil && m.GuildID != 0 {
-		return nil, ErrChannelNotFound
+	var gs *dstate.GuildSet
+	var cs *dstate.ChannelState
+
+	if m.GuildID != 0 {
+		gs = sys.State.GetGuild(m.GuildID)
+		if gs == nil {
+			return nil, ErrGuildNotFound
+		}
+
+		cs = gs.GetChannel(m.ChannelID)
+		if cs == nil {
+			return nil, ErrChannelNotFound
+		}
 	}
 
 	data := &Data{
@@ -220,8 +232,8 @@ func (sys *System) FillDataLegacyMessage(s *discordgo.Session, m *discordgo.Mess
 
 		data.GuildData = &GuildContextData{
 			CS: cs,
-			GS: cs.Guild,
-			MS: dstate.MSFromDGoMember(cs.Guild, &member),
+			GS: gs,
+			MS: dstate.MemberStateFromMember(m.Member),
 		}
 	}
 
@@ -229,9 +241,20 @@ func (sys *System) FillDataLegacyMessage(s *discordgo.Session, m *discordgo.Mess
 }
 
 func (sys *System) FillDataInteraction(s *discordgo.Session, interaction *discordgo.Interaction) (*Data, error) {
-	cs := sys.State.Channel(true, interaction.ChannelID)
-	if cs == nil && interaction.GuildID != 0 {
-		return nil, ErrChannelNotFound
+
+	var gs *dstate.GuildSet
+	var cs *dstate.ChannelState
+
+	if interaction.GuildID != 0 {
+		gs = sys.State.GetGuild(interaction.GuildID)
+		if gs == nil {
+			return nil, ErrGuildNotFound
+		}
+
+		cs = gs.GetChannel(interaction.ChannelID)
+		if cs == nil {
+			return nil, ErrChannelNotFound
+		}
 	}
 
 	user := interaction.User
@@ -256,12 +279,16 @@ func (sys *System) FillDataInteraction(s *discordgo.Session, interaction *discor
 		data.Source = TriggerSourceGuild
 
 		// were working off the assumption that member is always provided when in a guild
+		if interaction.Member == nil {
+			return nil, ErrMemberNotAvailableInteraction
+		}
+
 		member := *interaction.Member
 
 		data.GuildData = &GuildContextData{
 			CS: cs,
-			GS: cs.Guild,
-			MS: dstate.MSFromDGoMember(cs.Guild, &member),
+			GS: gs,
+			MS: dstate.MemberStateFromMember(&member),
 		}
 	}
 

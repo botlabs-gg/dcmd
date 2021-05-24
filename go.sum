@@ -84,6 +84,8 @@ github.com/jonas747/dstate v1.0.5/go.mod h1:6EQjQnyxbdNzQJS9wANzHVzKCyTO+lsmH6t3
 github.com/jonas747/dstate/v2 v2.0.0/go.mod h1:xuGgbuvq9CgnxYrHfNzT9Zvc8bVRCZHMnBekL0c79fY=
 github.com/jonas747/dstate/v2 v2.0.2 h1:+UU+BmEsTL5HL8ESzfYH0m3LgsdJdmijs3ih6BhWSaE=
 github.com/jonas747/dstate/v2 v2.0.2/go.mod h1:xuGgbuvq9CgnxYrHfNzT9Zvc8bVRCZHMnBekL0c79fY=
+github.com/jonas747/dstate/v3 v3.0.0-alpha1 h1:OlOCwiYZLtIQB+UXLACbR2txxs99MYi7W1lKXuY9wAc=
+github.com/jonas747/dstate/v3 v3.0.0-alpha1/go.mod h1:ZLma2mC/JA8G1Snz80Az6HWq7wXxzDqq+71DIPx9wBc=
 github.com/jonas747/gojay v0.0.0-20190906102056-b3bd5c8fcd50 h1:wsd5JxAZeqlRlj2tWklZmlWB7ojU7ksPR2X0rk4VzWI=
 github.com/jonas747/gojay v0.0.0-20190906102056-b3bd5c8fcd50/go.mod h1:e5tzLnqryDTnlHxS8vbZRvoMiO851Qb02WY2EoC6Dzs=
 github.com/jonas747/jdshardmanager v1.0.1/go.mod h1:iSw3N1gzbW3pvRmufNy+rNIo6zRgVbKNv/R7Tw6rQ5U=

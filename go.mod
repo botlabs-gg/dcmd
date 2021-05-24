@@ -1,4 +1,4 @@
-module github.com/jonas747/dcmd/v2
+module github.com/jonas747/dcmd/v3
 
 go 1.13
 
@@ -10,9 +10,8 @@ require (
 	github.com/gofrs/uuid v4.0.0+incompatible // indirect
 	github.com/gorilla/websocket v1.4.2 // indirect
 	github.com/hashicorp/go-cleanhttp v0.5.2 // indirect
-	github.com/jonas747/dcmd v1.2.4
 	github.com/jonas747/discordgo v1.5.5
-	github.com/jonas747/dstate/v2 v2.0.2
+	github.com/jonas747/dstate/v3 v3.0.0-alpha1
 	github.com/mailru/easyjson v0.7.7 // indirect
 	github.com/pkg/errors v0.9.1
 	github.com/stretchr/testify v1.7.0
@@ -23,3 +22,4 @@ require (
 )
 
 // replace github.com/jonas747/discordgo => ../discordgo
+// replace github.com/jonas747/dstate/v3 => ../dstate

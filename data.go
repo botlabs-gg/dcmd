@@ -5,7 +5,7 @@ import (
 	"reflect"
 
 	"github.com/jonas747/discordgo"
-	"github.com/jonas747/dstate/v2"
+	"github.com/jonas747/dstate/v3"
 	"github.com/pkg/errors"
 )
 
@@ -45,7 +45,7 @@ type Data struct {
 
 type GuildContextData struct {
 	CS *dstate.ChannelState
-	GS *dstate.GuildState
+	GS *dstate.GuildSet
 	MS *dstate.MemberState
 }
 

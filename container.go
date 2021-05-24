@@ -77,7 +77,7 @@ func (c *Container) Run(data *Data) (interface{}, error) {
 		name := data.SlashCommandTriggerData.Interaction.DataCommand.Name
 		for i := 0; i < depth; i++ {
 			if options[0] == nil {
-				return nil, errors.New("Options is nil")
+				return nil, errors.New("options is nil")
 			}
 
 			name = options[0].Name
@@ -226,20 +226,17 @@ func (c *Container) AbsFindCommandWithRest(searchStr string) (cmd *RegisteredCom
 		return
 	}
 
-	for {
-		cmd, searchStr = c.FindCommand(searchStr)
-		rest = searchStr
-		if cmd == nil {
-			return
-		}
-
-		if cast, ok := cmd.Command.(*Container); ok {
-			return cast.AbsFindCommandWithRest(searchStr)
-		}
-
+	cmd, searchStr = c.FindCommand(searchStr)
+	rest = searchStr
+	if cmd == nil {
 		return
 	}
 
+	if cast, ok := cmd.Command.(*Container); ok {
+		return cast.AbsFindCommandWithRest(searchStr)
+	}
+
+	return
 }
 
 // Sub returns a copy of the container but with the following attributes overwritten
