@@ -3,7 +3,7 @@ module github.com/jonas747/dcmd/v3
 go 1.13
 
 require (
-	github.com/bwmarrin/discordgo v0.23.2
+	github.com/bwmarrin/discordgo v0.23.2 // indirect
 	github.com/gobwas/httphead v0.1.0 // indirect
 	github.com/gobwas/pool v0.2.1 // indirect
 	github.com/gobwas/ws v1.0.4 // indirect
@@ -11,7 +11,7 @@ require (
 	github.com/gorilla/websocket v1.4.2 // indirect
 	github.com/hashicorp/go-cleanhttp v0.5.2 // indirect
 	github.com/jonas747/discordgo v1.5.5
-	github.com/jonas747/dstate/v3 v3.0.0-alpha1
+	github.com/jonas747/dstate/v3 v3.0.0-alpha2
 	github.com/mailru/easyjson v0.7.7 // indirect
 	github.com/pkg/errors v0.9.1
 	github.com/stretchr/testify v1.7.0
