@@ -5,11 +5,12 @@ This example provides a single command "time" that responds with the current tim
 */
 
 import (
-	"github.com/bwmarrin/discordgo"
-	"github.com/jonas747/dcmd"
 	"log"
 	"os"
 	"time"
+
+	"github.com/jonas747/dcmd/v3"
+	"github.com/jonas747/discordgo"
 )
 
 func main() {

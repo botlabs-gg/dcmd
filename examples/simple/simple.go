@@ -6,10 +6,11 @@ The commands `[hey/hello` and `[bye/bai`
 */
 
 import (
-	"github.com/bwmarrin/discordgo"
-	"github.com/jonas747/dcmd"
 	"log"
 	"os"
+
+	"github.com/jonas747/dcmd/v3"
+	"github.com/jonas747/discordgo"
 )
 
 func main() {
