@@ -644,7 +644,7 @@ func FindDiscordMemberByName(state dstate.StateTracker, gs *dstate.GuildSet, str
 
 	state.IterateMembers(gs.ID, func(chunk []*dstate.MemberState) bool {
 		for _, v := range chunk {
-			if v == nil {
+			if v == nil || v.Member == nil {
 				continue
 			}
 
@@ -652,7 +652,7 @@ func FindDiscordMemberByName(state dstate.StateTracker, gs *dstate.GuildSet, str
 				continue
 			}
 
-			if strings.EqualFold(str, v.User.Username) || strings.EqualFold(str, v.Nick) {
+			if strings.EqualFold(str, v.User.Username) || strings.EqualFold(str, v.Member.Nick) {
 				fullMatches = append(fullMatches, v)
 				if len(fullMatches) >= 5 {
 					break
@@ -856,9 +856,9 @@ type AdvUserMatch struct {
 }
 
 func (a *AdvUserMatch) UsernameOrNickname() string {
-	if a.Member != nil {
-		if a.Member.Nick != "" {
-			return a.Member.Nick
+	if a.Member != nil && a.Member.Member != nil {
+		if a.Member.Member.Nick != "" {
+			return a.Member.Member.Nick
 		}
 	}
 

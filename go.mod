@@ -11,7 +11,7 @@ require (
 	github.com/gorilla/websocket v1.4.2 // indirect
 	github.com/hashicorp/go-cleanhttp v0.5.2 // indirect
 	github.com/jonas747/discordgo v1.5.5
-	github.com/jonas747/dstate/v3 v3.0.0-alpha2
+	github.com/jonas747/dstate/v3 v3.0.0-alpha4
 	github.com/mailru/easyjson v0.7.7 // indirect
 	github.com/pkg/errors v0.9.1
 	github.com/stretchr/testify v1.7.0
