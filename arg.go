@@ -606,7 +606,7 @@ func (u *UserArg) ParseFromMessage(def *ArgDef, part string, data *Data) (interf
 		// Search for username
 		m, err := FindDiscordMemberByName(data.System.State, data.GuildData.GS, part)
 		if m != nil {
-			return m.User, nil
+			return &m.User, nil
 		}
 		return nil, err
 	}
