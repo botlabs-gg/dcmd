@@ -73,8 +73,8 @@ github.com/jonas747/discordgo v1.1.1/go.mod h1:Mq9l7/Kn7L8Np5p//vuxKfnZohrX70XYx
 github.com/jonas747/discordgo v1.5.1/go.mod h1:AtjBAWqqaBsSj2dgxKaeQ3Gy8GFlDRg+PZiFcsqav00=
 github.com/jonas747/discordgo v1.5.5 h1:DR9sTDClo7OOMoSBwwg8at5ewt0n9YLtBws3Uns+sCg=
 github.com/jonas747/discordgo v1.5.5/go.mod h1:AtjBAWqqaBsSj2dgxKaeQ3Gy8GFlDRg+PZiFcsqav00=
-github.com/jonas747/dstate/v3 v3.0.0-alpha4 h1:POXEffgeHOYd96gSx620qmiNRXQRs5Os/JJYWq+FttU=
-github.com/jonas747/dstate/v3 v3.0.0-alpha4/go.mod h1:ZLma2mC/JA8G1Snz80Az6HWq7wXxzDqq+71DIPx9wBc=
+github.com/jonas747/dstate/v3 v3.0.0-alpha7 h1:4N1mk9dTuluT80hnhJFz2u9ATMfmd/JV7RXV7B0geLk=
+github.com/jonas747/dstate/v3 v3.0.0-alpha7/go.mod h1:ZLma2mC/JA8G1Snz80Az6HWq7wXxzDqq+71DIPx9wBc=
 github.com/jonas747/gojay v0.0.0-20190906102056-b3bd5c8fcd50 h1:wsd5JxAZeqlRlj2tWklZmlWB7ojU7ksPR2X0rk4VzWI=
 github.com/jonas747/gojay v0.0.0-20190906102056-b3bd5c8fcd50/go.mod h1:e5tzLnqryDTnlHxS8vbZRvoMiO851Qb02WY2EoC6Dzs=
 github.com/jonas747/jdshardmanager v1.0.1/go.mod h1:iSw3N1gzbW3pvRmufNy+rNIo6zRgVbKNv/R7Tw6rQ5U=
