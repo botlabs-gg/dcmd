@@ -234,7 +234,7 @@ func (sys *System) FillDataLegacyMessage(s *discordgo.Session, m *discordgo.Mess
 		data.GuildData = &GuildContextData{
 			CS: cs,
 			GS: gs,
-			MS: dstate.MemberStateFromMember(m.Member),
+			MS: dstate.MemberStateFromMember(&member),
 		}
 	}
 
