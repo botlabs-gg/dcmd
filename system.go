@@ -229,6 +229,7 @@ func (sys *System) FillDataLegacyMessage(s *discordgo.Session, m *discordgo.Mess
 
 		member := *m.Member
 		member.User = m.Author // user field is not provided in Message.Member, its weird but *shrug*
+		member.GuildID = m.GuildID
 
 		data.GuildData = &GuildContextData{
 			CS: cs,
@@ -284,6 +285,7 @@ func (sys *System) FillDataInteraction(s *discordgo.Session, interaction *discor
 		}
 
 		member := *interaction.Member
+		member.GuildID = interaction.GuildID
 
 		data.GuildData = &GuildContextData{
 			CS: cs,
