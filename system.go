@@ -221,7 +221,11 @@ func (sys *System) FillDataLegacyMessage(s *discordgo.Session, m *discordgo.Mess
 	if m.GuildID == 0 {
 		data.Source = TriggerSourceDM
 	} else {
-		data.Source = TriggerSourceGuild
+		if cs.IsThread() {
+			data.Source = TriggerSourceThread
+		} else {
+			data.Source = TriggerSourceGuild
+		}
 
 		if m.Member == nil || m.Author == nil {
 			return nil, ErrMemberNotAvailable
@@ -277,7 +281,11 @@ func (sys *System) FillDataInteraction(s *discordgo.Session, interaction *discor
 	if interaction.GuildID == 0 {
 		data.Source = TriggerSourceDM
 	} else {
-		data.Source = TriggerSourceGuild
+		if cs.IsThread() {
+			data.Source = TriggerSourceThread
+		} else {
+			data.Source = TriggerSourceGuild
+		}
 
 		// were working off the assumption that member is always provided when in a guild
 		if interaction.Member == nil {

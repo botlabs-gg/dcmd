@@ -99,10 +99,14 @@ func (d *Data) SendFollowupMessage(reply interface{}, allowedMentions discordgo.
 		}
 		return []*discordgo.Message{}, nil
 	case *discordgo.MessageEmbed:
-
 		switch d.TriggerType {
 		case TriggerTypeSlashCommands:
-			m, err := d.Session.CreateFollowupMessage(d.SlashCommandTriggerData.Interaction.ApplicationID, d.SlashCommandTriggerData.Interaction.Token, &discordgo.WebhookParams{
+			var threadID int64
+			if d.Source == TriggerSourceThread {
+				threadID = d.ChannelID
+			}
+
+			m, err := d.Session.CreateFollowupMessage(d.SlashCommandTriggerData.Interaction.ApplicationID, d.SlashCommandTriggerData.Interaction.Token, threadID, &discordgo.WebhookParams{
 				Embeds:          []*discordgo.MessageEmbed{t},
 				AllowedMentions: &allowedMentions,
 			})
@@ -127,7 +131,12 @@ func (d *Data) SendFollowupMessage(reply interface{}, allowedMentions discordgo.
 					AllowedMentions: &allowedMentions,
 				}
 
-				m, err := d.Session.CreateFollowupMessage(d.SlashCommandTriggerData.Interaction.ApplicationID, d.SlashCommandTriggerData.Interaction.Token, params)
+				var threadID int64
+				if d.Source == TriggerSourceThread {
+					threadID = d.ChannelID
+				}
+
+				m, err := d.Session.CreateFollowupMessage(d.SlashCommandTriggerData.Interaction.ApplicationID, d.SlashCommandTriggerData.Interaction.Token, threadID, params)
 				if err != nil {
 					return msgs, err
 				}
@@ -170,7 +179,12 @@ func (d *Data) SendFollowupMessage(reply interface{}, allowedMentions discordgo.
 				params.Embeds = []*discordgo.MessageEmbed{t.Embed}
 			}
 
-			m, err := d.Session.CreateFollowupMessage(d.SlashCommandTriggerData.Interaction.ApplicationID, d.SlashCommandTriggerData.Interaction.Token, params)
+			var threadID int64
+			if d.Source == TriggerSourceThread {
+				threadID = d.ChannelID
+			}
+
+			m, err := d.Session.CreateFollowupMessage(d.SlashCommandTriggerData.Interaction.ApplicationID, d.SlashCommandTriggerData.Interaction.Token, threadID, params)
 			return []*discordgo.Message{m}, err
 
 		default:
@@ -188,6 +202,7 @@ type TriggerSource int
 const (
 	TriggerSourceGuild TriggerSource = iota
 	TriggerSourceDM
+	TriggerSourceThread
 )
 
 type TriggerType int
