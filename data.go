@@ -101,15 +101,16 @@ func (d *Data) SendFollowupMessage(reply interface{}, allowedMentions discordgo.
 	case *discordgo.MessageEmbed:
 		switch d.TriggerType {
 		case TriggerTypeSlashCommands:
-			var threadID int64
-			if d.Source == TriggerSourceThread {
-				threadID = d.ChannelID
-			}
-
-			m, err := d.Session.CreateFollowupMessage(d.SlashCommandTriggerData.Interaction.ApplicationID, d.SlashCommandTriggerData.Interaction.Token, threadID, &discordgo.WebhookParams{
+			params := &discordgo.WebhookParams{
 				Embeds:          []*discordgo.MessageEmbed{t},
 				AllowedMentions: &allowedMentions,
-			})
+			}
+
+			if d.Source == TriggerSourceThread {
+				params.ThreadID = d.ChannelID
+			}
+
+			m, err := d.Session.CreateFollowupMessage(d.SlashCommandTriggerData.Interaction.ApplicationID, d.SlashCommandTriggerData.Interaction.Token, params)
 			return []*discordgo.Message{m}, err
 		default:
 			m, err := d.Session.ChannelMessageSendEmbed(d.ChannelID, t)
@@ -131,12 +132,11 @@ func (d *Data) SendFollowupMessage(reply interface{}, allowedMentions discordgo.
 					AllowedMentions: &allowedMentions,
 				}
 
-				var threadID int64
 				if d.Source == TriggerSourceThread {
-					threadID = d.ChannelID
+					params.ThreadID = d.ChannelID
 				}
 
-				m, err := d.Session.CreateFollowupMessage(d.SlashCommandTriggerData.Interaction.ApplicationID, d.SlashCommandTriggerData.Interaction.Token, threadID, params)
+				m, err := d.Session.CreateFollowupMessage(d.SlashCommandTriggerData.Interaction.ApplicationID, d.SlashCommandTriggerData.Interaction.Token, params)
 				if err != nil {
 					return msgs, err
 				}
@@ -179,12 +179,11 @@ func (d *Data) SendFollowupMessage(reply interface{}, allowedMentions discordgo.
 				params.Embeds = []*discordgo.MessageEmbed{t.Embed}
 			}
 
-			var threadID int64
 			if d.Source == TriggerSourceThread {
-				threadID = d.ChannelID
+				params.ThreadID = d.ChannelID
 			}
 
-			m, err := d.Session.CreateFollowupMessage(d.SlashCommandTriggerData.Interaction.ApplicationID, d.SlashCommandTriggerData.Interaction.Token, threadID, params)
+			m, err := d.Session.CreateFollowupMessage(d.SlashCommandTriggerData.Interaction.ApplicationID, d.SlashCommandTriggerData.Interaction.Token, params)
 			return []*discordgo.Message{m}, err
 
 		default:
