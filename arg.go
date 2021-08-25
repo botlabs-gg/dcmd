@@ -5,8 +5,8 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/jonas747/discordgo"
-	"github.com/jonas747/dstate/v3"
+	"github.com/jonas747/discordgo/v2"
+	"github.com/jonas747/dstate/v4"
 )
 
 // ArgDef represents a argument definition, either a switch or plain arg
@@ -415,6 +415,7 @@ var (
 	UserReqMention  = &UserArg{RequireMention: true}
 	UserID          = &UserIDArg{}
 	Channel         = &ChannelArg{}
+	ChannelOrThread = &ChannelArg{AllowThreads: true}
 	AdvUser         = &AdvUserArg{EnableUserID: true, EnableUsernameSearch: true, RequireMembership: true}
 	AdvUserNoMember = &AdvUserArg{EnableUserID: true, EnableUsernameSearch: true}
 )
@@ -776,7 +777,9 @@ func (u *UserIDArg) SlashCommandOptions(def *ArgDef) []*discordgo.ApplicationCom
 
 // UserIDArg matches a mention or a plain id, the user does not have to be a part of the server
 // The type of the ID is parsed into a int64
-type ChannelArg struct{}
+type ChannelArg struct {
+	AllowThreads bool
+}
 
 var _ ArgType = (*ChannelArg)(nil)
 
@@ -815,8 +818,14 @@ func (ca *ChannelArg) ParseFromMessage(def *ArgDef, part string, data *Data) (in
 		cID = id
 	}
 
-	if c := data.GuildData.GS.GetChannel(cID); c != nil {
-		return c, nil
+	if ca.AllowThreads {
+		if c := data.GuildData.GS.GetChannelOrThread(cID); c != nil {
+			return c, nil
+		}
+	} else {
+		if c := data.GuildData.GS.GetChannel(cID); c != nil {
+			return c, nil
+		}
 	}
 
 	return nil, &ImproperMention{part}
@@ -832,8 +841,14 @@ func (ca *ChannelArg) ParseFromInteraction(def *ArgDef, data *Data, options *Sla
 		return nil, err
 	}
 
-	if cs := data.GuildData.GS.GetChannel(channel.ID); cs != nil {
-		return cs, nil
+	if ca.AllowThreads {
+		if cs := data.GuildData.GS.GetChannelOrThread(channel.ID); cs != nil {
+			return cs, nil
+		}
+	} else {
+		if cs := data.GuildData.GS.GetChannel(channel.ID); cs != nil {
+			return cs, nil
+		}
 	}
 
 	return ErrChannelNotFound, nil

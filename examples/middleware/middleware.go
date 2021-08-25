@@ -11,7 +11,7 @@ import (
 	"sync"
 
 	"github.com/jonas747/dcmd/v3"
-	"github.com/jonas747/discordgo"
+	"github.com/jonas747/discordgo/v2"
 )
 
 func main() {

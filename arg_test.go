@@ -3,7 +3,7 @@ package dcmd
 import (
 	"testing"
 
-	"github.com/jonas747/discordgo"
+	"github.com/jonas747/discordgo/v2"
 	"github.com/stretchr/testify/assert"
 )
 

@@ -4,9 +4,10 @@ type Trigger struct {
 	Names       []string
 	Middlewares []MiddleWareFunc
 
-	HideFromHelp     bool
-	DisableInDM      bool
-	DisableOutsideDM bool
+	HideFromHelp bool
+
+	EnableInDM            bool
+	EnableInGuildChannels bool
 }
 
 func NewTrigger(name string, aliases ...string) *Trigger {
@@ -25,13 +26,13 @@ func (t *Trigger) SetHideFromHelp(hide bool) *Trigger {
 	return t
 }
 
-func (t *Trigger) SetDisableInDM(disable bool) *Trigger {
-	t.DisableInDM = disable
+func (t *Trigger) SetEnableInDM(enable bool) *Trigger {
+	t.EnableInDM = enable
 	return t
 }
 
-func (t *Trigger) SetDisableOutsideDM(disable bool) *Trigger {
-	t.DisableOutsideDM = disable
+func (t *Trigger) SetEnableInGuildChannels(enable bool) *Trigger {
+	t.EnableInGuildChannels = enable
 	return t
 }
 

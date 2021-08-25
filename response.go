@@ -1,13 +1,12 @@
 package dcmd
 
 import (
-	"fmt"
 	"strings"
 	"time"
 	"unicode"
 	"unicode/utf8"
 
-	"github.com/jonas747/discordgo"
+	"github.com/jonas747/discordgo/v2"
 )
 
 type Response interface {
@@ -61,64 +60,6 @@ func (t *TemporaryResponse) Send(data *Data) ([]*discordgo.Message, error) {
 		}
 	})
 	return msgs, nil
-}
-
-// The FallbackEmbed reponse type will turn the embed into a normal mesasge if there is not enough permissions
-// This requires state member tracking enabled
-type FallbackEmebd struct {
-	*discordgo.MessageEmbed
-}
-
-func (fe *FallbackEmebd) Send(data *Data) ([]*discordgo.Message, error) {
-
-	switch data.TriggerType {
-	case TriggerTypeSlashCommands:
-		// Slash commands can always send embed responses
-		return data.SendFollowupMessage(fe.MessageEmbed, discordgo.AllowedMentions{})
-	default:
-		channelPerms, err := data.Session.State.UserChannelPermissions(data.Session.State.User.ID, data.ChannelID)
-		if err != nil {
-			return nil, err
-		}
-
-		if channelPerms&discordgo.PermissionEmbedLinks != 0 {
-			m, err := data.Session.ChannelMessageSendEmbed(data.ChannelID, fe.MessageEmbed)
-			if err != nil {
-				return nil, err
-			}
-
-			return []*discordgo.Message{m}, nil
-		}
-
-		content := StringEmbed(fe.MessageEmbed) + "\n*I have no 'embed links' permissions here, this is a fallback. it looks prettier if i have that perm :)*"
-		return SplitSendMessage(data, content, discordgo.AllowedMentions{})
-	}
-}
-
-// StringEmbed turns the embed into the best
-func StringEmbed(embed *discordgo.MessageEmbed) string {
-	body := ""
-
-	if embed.Author != nil {
-		body += embed.Author.Name + "\n"
-		body += embed.Author.URL + "\n"
-	}
-
-	if embed.Title != "" {
-		body += "**" + embed.Title + "**\n"
-	}
-
-	if embed.Description != "" {
-		body += embed.Description + "\n"
-	}
-	if body != "" {
-		body += "\n"
-	}
-
-	for _, v := range embed.Fields {
-		body += fmt.Sprintf("**%s**\n%s\n\n", v.Name, v.Value)
-	}
-	return body
 }
 
 // SplitSendMessage uses SplitString to make sure each message is within 2k characters and splits at last newline before that (if possible)

@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/jonas747/discordgo"
+	"github.com/jonas747/discordgo/v2"
 )
 
 // HelpFormatter is a interface for help formatters, for an example see StdHelpFormatter

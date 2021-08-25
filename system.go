@@ -6,8 +6,8 @@ import (
 	"runtime/debug"
 	"strings"
 
-	"github.com/jonas747/discordgo"
-	"github.com/jonas747/dstate/v3"
+	"github.com/jonas747/discordgo/v2"
+	"github.com/jonas747/dstate/v4"
 	"github.com/pkg/errors"
 )
 
@@ -202,7 +202,7 @@ func (sys *System) FillDataLegacyMessage(s *discordgo.Session, m *discordgo.Mess
 			return nil, ErrGuildNotFound
 		}
 
-		cs = gs.GetChannel(m.ChannelID)
+		cs = gs.GetChannelOrThread(m.ChannelID)
 		if cs == nil {
 			return nil, ErrChannelNotFound
 		}
@@ -252,7 +252,7 @@ func (sys *System) FillDataInteraction(s *discordgo.Session, interaction *discor
 			return nil, ErrGuildNotFound
 		}
 
-		cs = gs.GetChannel(interaction.ChannelID)
+		cs = gs.GetChannelOrThread(interaction.ChannelID)
 		if cs == nil {
 			return nil, ErrChannelNotFound
 		}

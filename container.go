@@ -6,7 +6,7 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/jonas747/discordgo"
+	"github.com/jonas747/discordgo/v2"
 )
 
 type MiddleWareFunc func(next RunFunc) RunFunc
@@ -128,10 +128,10 @@ func (c *Container) Run(data *Data) (interface{}, error) {
 
 	data.Cmd = matchingCmd
 
-	if matchingCmd.Trigger.DisableInDM && data.Source == TriggerSourceDM {
+	if !matchingCmd.Trigger.EnableInDM && data.Source == TriggerSourceDM {
 		// Disabled in dms
 		return nil, nil
-	} else if matchingCmd.Trigger.DisableOutsideDM && data.Source != TriggerSourceDM {
+	} else if !matchingCmd.Trigger.EnableInGuildChannels && data.Source != TriggerSourceDM {
 		// Disabled outside dms
 		return nil, nil
 	}
