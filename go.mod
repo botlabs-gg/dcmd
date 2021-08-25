@@ -1,4 +1,4 @@
-module github.com/jonas747/dcmd/v3
+module github.com/jonas747/dcmd/v4
 
 go 1.13
 
