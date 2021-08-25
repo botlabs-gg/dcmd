@@ -9,7 +9,7 @@ import (
 	"os"
 	"time"
 
-	"github.com/jonas747/dcmd/v3"
+	"github.com/jonas747/dcmd/v4"
 	"github.com/jonas747/discordgo/v2"
 )
 
