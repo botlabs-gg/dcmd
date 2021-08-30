@@ -52,7 +52,7 @@ func main() {
 		Cat:  modCat,
 	}, dcmd.NewTrigger("Mute"))
 
-	musicContainer := system.Root.Sub("music", "m")
+	musicContainer, _ := system.Root.Sub("music", "m")
 	musicContainer.HelpOwnEmbed = true
 	musicContainer.HelpColor = 0xd60eab
 	musicContainer.HelpTitleEmoji = "🎶"

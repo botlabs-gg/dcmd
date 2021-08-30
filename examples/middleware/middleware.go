@@ -30,7 +30,7 @@ func main() {
 	system.Root.AddCommand(heyCmd, dcmd.NewTrigger("Hello", "Hey"))
 	system.Root.AddCommand(byeCmd, dcmd.NewTrigger("Bye", "Bai"))
 
-	container := system.Root.Sub("container", "c")
+	container, _ := system.Root.Sub("container", "c")
 	container.Description = "Some extra seperated commands"
 
 	container.AddCommand(heyCmd, dcmd.NewTrigger("Hello", "Hey"))

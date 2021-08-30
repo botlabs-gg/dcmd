@@ -241,7 +241,7 @@ func (c *Container) AbsFindCommandWithRest(searchStr string) (cmd *RegisteredCom
 
 // Sub returns a copy of the container but with the following attributes overwritten
 // and no commands registered
-func (c *Container) Sub(mainName string, aliases ...string) *Container {
+func (c *Container) Sub(mainName string, aliases ...string) (*Container, *Trigger) {
 	cop := new(Container)
 	*cop = *c
 
@@ -252,9 +252,11 @@ func (c *Container) Sub(mainName string, aliases ...string) *Container {
 	cop.middlewares = nil
 	cop.Parent = c
 
-	c.AddCommand(cop, NewTrigger(mainName, aliases...))
+	t := NewTrigger(mainName, aliases...)
 
-	return cop
+	c.AddCommand(cop, t)
+
+	return cop, t
 }
 
 func (c *Container) AddCommand(cmd Cmd, trigger *Trigger) *RegisteredCommand {
