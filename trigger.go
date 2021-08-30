@@ -17,7 +17,9 @@ func NewTrigger(name string, aliases ...string) *Trigger {
 	}
 
 	return &Trigger{
-		Names: names,
+		Names:                 names,
+		EnableInDM:            true,
+		EnableInGuildChannels: true,
 	}
 }
 
