@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/jonas747/discordgo/v2"
+	"github.com/jonas747/dstate/v4"
 )
 
 type MiddleWareFunc func(next RunFunc) RunFunc
@@ -131,8 +132,11 @@ func (c *Container) Run(data *Data) (interface{}, error) {
 	if !matchingCmd.Trigger.EnableInDM && data.Source == TriggerSourceDM {
 		// Disabled in dms
 		return nil, nil
-	} else if !matchingCmd.Trigger.EnableInGuildChannels && data.Source != TriggerSourceDM {
-		// Disabled outside dms
+	} else if !matchingCmd.Trigger.EnableInGuildChannels && data.Source == TriggerSourceGuild && !channelIsThread(data.GuildData.CS) {
+		// Disabled in normal guild channels
+		return nil, nil
+	} else if !matchingCmd.Trigger.EnableInThreads && data.Source == TriggerSourceGuild && channelIsThread(data.GuildData.CS) {
+		// Disabled in threads
 		return nil, nil
 	}
 
@@ -372,4 +376,8 @@ func ValidateCommand(cmd Cmd, trigger *Trigger) error {
 	}
 
 	return nil
+}
+
+func channelIsThread(cs *dstate.ChannelState) bool {
+	return cs.Type == discordgo.ChannelTypeGuildPrivateThread || cs.Type == discordgo.ChannelTypeGuildPublicThread
 }

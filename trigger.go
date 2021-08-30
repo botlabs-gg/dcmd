@@ -8,6 +8,7 @@ type Trigger struct {
 
 	EnableInDM            bool
 	EnableInGuildChannels bool
+	EnableInThreads       bool
 }
 
 func NewTrigger(name string, aliases ...string) *Trigger {
@@ -20,6 +21,7 @@ func NewTrigger(name string, aliases ...string) *Trigger {
 		Names:                 names,
 		EnableInDM:            true,
 		EnableInGuildChannels: true,
+		EnableInThreads:       true,
 	}
 }
 
@@ -35,6 +37,11 @@ func (t *Trigger) SetEnableInDM(enable bool) *Trigger {
 
 func (t *Trigger) SetEnableInGuildChannels(enable bool) *Trigger {
 	t.EnableInGuildChannels = enable
+	return t
+}
+
+func (t *Trigger) SetEnabledInThreads(enable bool) *Trigger {
+	t.EnableInThreads = enable
 	return t
 }
 
