@@ -752,7 +752,7 @@ func (u *UserIDArg) ParseFromInteraction(def *ArgDef, data *Data, options *Slash
 		return user.ID, nil
 	}
 
-	idStr, err := options.ExpectString(def.Name + "-ID")
+	idStr, err := options.ExpectString(def.Name)
 	if err != nil {
 		return nil, err
 	}
@@ -766,13 +766,7 @@ func (u *UserIDArg) HelpName() string {
 }
 
 func (u *UserIDArg) SlashCommandOptions(def *ArgDef) []*discordgo.ApplicationCommandOption {
-	// Give the user the ability to pick one of these, sadly discord slash commands does not have a basic "one of" type
-	optID := def.StandardSlashCommandOption(discordgo.CommandOptionTypeString)
-	optUser := def.StandardSlashCommandOption(discordgo.CommandOptionTypeUser)
-
-	optID.Name = optID.Name + "-ID"
-
-	return []*discordgo.ApplicationCommandOption{optID, optUser}
+	return []*discordgo.ApplicationCommandOption{def.StandardSlashCommandOption(discordgo.CommandOptionTypeUser)}
 }
 
 // UserIDArg matches a mention or a plain id, the user does not have to be a part of the server
